@@ -1,9 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../../users/schema';
 import { DATABASE_CONNECTION } from 'src/database/database-connection';
 import { HashingService } from '../hashing/hashing.service';
 import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
+import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
+import { SignInDto } from './dto/sign-in.dto/sign-in.dto';
 
 @Injectable()
 export class AuthenticationService {
@@ -27,10 +34,26 @@ export class AuthenticationService {
         })
         .returning();
     } catch (err) {
-        const pgUniqueViolationsErrorCode = '23505'
-        if (err.code === pgUniqueViolationsErrorCode) {
-            
-        }
+      if (err.code === pgUniqueViolationsErrorCode) {
+        throw new ConflictException('Email already exists');
+      }
+      throw err;
     }
+  }
+  async signIn(signInDto: SignInDto) {
+    const user = await this.database.query.users.findFirst({
+      where: (users, { eq }) => eq(users.email, signInDto.email),
+    });
+    if (!user) {
+      throw new UnauthorizedException('User does not exist');
+    }
+    const isEqual = await this.hashingService.compare(
+      signInDto.password,
+      user.password,
+    );
+    if (!isEqual) {
+      throw new UnauthorizedException('Password does not match');
+    }
+    return true;
   }
 }
