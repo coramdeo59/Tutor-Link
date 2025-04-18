@@ -18,6 +18,8 @@ import { ActiveUserData } from '../interfaces/active-user-data.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-token-ids.storage';
 import { randomUUID } from 'crypto';
+import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-token.exception';
+import { Role } from '../../users/enums/role-enums';
 
 @Injectable()
 export class AuthenticationService {
@@ -33,7 +35,7 @@ export class AuthenticationService {
 
   async signUp(signUpDto: SignUpDto) {
     try {
-      const { name, email, password } = signUpDto;
+      const { name, email, password, role } = signUpDto;
       const hashedPassword = await this.hashingService.hash(password);
 
       return await this.database
@@ -42,6 +44,7 @@ export class AuthenticationService {
           name,
           email,
           password: hashedPassword,
+          role: role || Role.Regular,
         })
         .returning();
     } catch (err) {
@@ -70,14 +73,17 @@ export class AuthenticationService {
     return await this.generateTokens(user);
   }
 
-  public async generateTokens(user: { id: number; name: string; email: string; password: string; createdAt: Date | null; }) {
+  public async generateTokens(user: { id: number; name: string; email: string; password: string; role: string; createdAt?: Date | null; }) {
     const refreshTokenId = randomUUID();
+    
+    // Convert string role to enum
+    const userRole = user.role as Role;
     
     const [accessToken, refreshToken] = await Promise.all([
       this.signToken<Partial<ActiveUserData>>(
         user.id,
         this.jwtConfiguration.accessTokenTtl,
-        { email: user.email }
+        { email: user.email, role: userRole }
       ),
       this.signToken<Partial<ActiveUserData>>(
         user.id, 
@@ -116,12 +122,8 @@ export class AuthenticationService {
         throw new UnauthorizedException('Refresh token ID not found');
       }
       
-      // Validate the refresh token ID
-      const isValid = await this.refreshTokenIdsStorage.validate(sub, refreshTokenId);
       
-      if (!isValid) {
-        throw new UnauthorizedException('Refresh token is invalid or has been revoked');
-      }
+      await this.refreshTokenIdsStorage.validate(sub, refreshTokenId);
       
       // Invalidate the current refresh token
       await this.refreshTokenIdsStorage.invalidate(sub, refreshTokenId);
@@ -137,6 +139,9 @@ export class AuthenticationService {
       return this.generateTokens(user);
         
     } catch (error) {
+      if (error instanceof InvalidatedRefreshTokenError) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid refresh token');
     }
   }

@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Observable } from 'rxjs';
 import { AccessTokenGuard } from '../access-token/access-token.guard';
 import { AuthType } from '../../enums/auth-type.enum';
 import { AUTH_TYPE_KEY } from '../../decorators/auth-decorator';
@@ -15,34 +16,23 @@ export class AuthenticationGuard implements CanActivate {
   private readonly authTypeGuardMap: Record<
     AuthType,
     CanActivate | CanActivate[]
-  > = {
-    [AuthType.Bearer]: this.accessToken,
-    [AuthType.None]: { canActivate: () => true },
-  };
+  >;
   constructor(
     private readonly reflector: Reflector,
     private readonly accessToken: AccessTokenGuard,
-  ) {}
-  
+  ) {
+    this.authTypeGuardMap = {
+      [AuthType.Bearer]: this.accessToken,
+      [AuthType.None]: { canActivate: () => true },
+    };
+  }
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const authTypes = this.reflector.getAllAndOverride<AuthType[]>(
       AUTH_TYPE_KEY,
       [context.getHandler(), context.getClass()],
     ) ?? [AuthenticationGuard.defaultAuthType];
-    
-    // If AuthType.None is present, allow access immediately
-    if (authTypes.includes(AuthType.None)) {
-      return true;
-    }
-    
     const guards = authTypes.map((type) => this.authTypeGuardMap[type]).flat();
     let error = new UnauthorizedException();
-    
-    
-    if (guards.length === 0) {
-      return true;
-    }
-    
     for (const instance of guards) {
       const canActivate = await Promise.resolve(
         instance.canActivate(context),
