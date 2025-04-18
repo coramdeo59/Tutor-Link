@@ -8,6 +8,20 @@
       "when": 1741302496829,
       "tag": "0000_quiet_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1741722887610,
+      "tag": "0001_misty_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744740156021,
+      "tag": "0002_hot_black_bird",
+      "breakpoints": true
     }
   ]
 }

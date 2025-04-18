@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from './database-connection';
 import { Pool } from 'pg';
 import * as userSchema from '../users/schema';
+import { DrizzleService } from './drizzle.service';
 
 @Module({
   imports: [ConfigModule],
@@ -23,7 +24,8 @@ import * as userSchema from '../users/schema';
       },
       inject: [ConfigService],
     },
+    DrizzleService,
   ],
-  exports: [DATABASE_CONNECTION],
+  exports: [DATABASE_CONNECTION, DrizzleService],
 })
 export class DatabaseModule {}
