@@ -2,14 +2,20 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { TutorsService } from './tutors.service';
 import { CreateTutorDto } from './dto/create-tutor.dto';
 import { UpdateTutorDto } from './dto/update-tutor.dto';
+import { ActiveUser } from '../auth/Decorators/active-user.decorator'; // Import ActiveUser
+import { ActiveUserData } from '../auth/interfaces/active-user-data.interface'; // Import ActiveUserData
 
 @Controller('tutors')
 export class TutorsController {
   constructor(private readonly tutorsService: TutorsService) {}
 
   @Post()
-  create(@Body() createTutorDto: CreateTutorDto) {
-    return this.tutorsService.create(createTutorDto);
+  create(
+    @Body() createTutorDto: CreateTutorDto,
+    @ActiveUser() user: ActiveUserData // Inject ActiveUser
+  ) {
+    // Pass the userId from the active user to the service
+    return this.tutorsService.create(createTutorDto, user.sub); 
   }
 
   @Get()
