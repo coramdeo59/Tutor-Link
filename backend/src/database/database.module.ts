@@ -13,9 +13,31 @@ import { DrizzleService } from './drizzle.service';
     {
       provide: DATABASE_CONNECTION,
       useFactory: (configService: ConfigService) => {
-        const pool = new Pool({
-          connectionString: configService.getOrThrow('DATABASE_URL'),
-        });
+        // Check if individual DB parameters are available
+        const host = configService.get('POSTGRES_HOST');
+        const port = configService.get('POSTGRES_PORT');
+        const user = configService.get('POSTGRES_USER');
+        const password = configService.get('POSTGRES_PASSWORD');
+        const database = configService.get('POSTGRES_DB');
+
+        let pool: Pool;
+        
+        // If all individual parameters are present, use them
+        if (host && port && user && password && database) {
+          pool = new Pool({
+            host,
+            port: parseInt(port, 10),
+            user,
+            password,
+            database,
+          });
+        } else {
+          // Fall back to DATABASE_URL
+          pool = new Pool({
+            connectionString: configService.getOrThrow('DATABASE_URL'),
+          });
+        }
+
         return drizzle(pool, {
           schema: {
             ...userSchema,
