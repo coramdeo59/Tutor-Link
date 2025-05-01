@@ -1,19 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { DATABASE_CONNECTION } from './database-connection';
 import { Pool } from 'pg';
 import * as userSchema from '../users/schema';
+import * as addressSchema from '../users/addres/schema';
 import { DrizzleService } from './drizzle.service';
+import { DATABASE_CONNECTION } from './database-connection';
 
 @Module({
   imports: [ConfigModule],
   controllers: [],
   providers: [
     {
-      provide: DATABASE_CONNECTION,
-      useFactory: (configService: ConfigService) => {
-        // Check if individual DB parameters are available
+      provide: DATABASE_CONNECTION, // Change from 'drizzle' to DATABASE_CONNECTION
+      useFactory: async (configService: ConfigService) => {
         const host = configService.get('POSTGRES_HOST');
         const port = configService.get('POSTGRES_PORT');
         const user = configService.get('POSTGRES_USER');
@@ -21,7 +21,7 @@ import { DrizzleService } from './drizzle.service';
         const database = configService.get('POSTGRES_DB');
 
         let pool: Pool;
-        
+
         // If all individual parameters are present, use them
         if (host && port && user && password && database) {
           pool = new Pool({
@@ -41,13 +41,19 @@ import { DrizzleService } from './drizzle.service';
         return drizzle(pool, {
           schema: {
             ...userSchema,
+            ...addressSchema,
           },
         });
       },
       inject: [ConfigService],
     },
+
+    {
+      provide: 'drizzle',
+      useExisting: DATABASE_CONNECTION,
+    },
     DrizzleService,
   ],
-  exports: [DATABASE_CONNECTION, DrizzleService],
+  exports: [DATABASE_CONNECTION, 'drizzle'], 
 })
 export class DatabaseModule {}

@@ -19,4 +19,4 @@ export class DrizzleService {
   get db(): NodePgDatabase<typeof schema> {
     return this.drizzleDb;
   }
-} 
+}
