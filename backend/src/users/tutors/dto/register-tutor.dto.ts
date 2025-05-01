@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, IsNumber } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  IsNumber,
+} from 'class-validator';
 
 export class RegisterTutorDto {
   // User data
@@ -11,7 +18,7 @@ export class RegisterTutorDto {
 
   @MinLength(10)
   password: string;
-  
+
   // Tutor-specific data
   @IsOptional()
   @IsString()
