@@ -5,16 +5,24 @@ import {
 } from '@nestjs/common';
 import Redis from 'ioredis';
 import { InvalidatedRefreshTokenError } from '../exceptions/invalidated-refresh-token.exception';
+import { ConfigService } from '@nestjs/config'; // Import ConfigService
 
 @Injectable()
 export class RefreshTokenIdsStorage
   implements OnApplicationBootstrap, OnApplicationShutdown
 {
   private redisClient: Redis;
+
+  constructor(private readonly configService: ConfigService) {} // Inject ConfigService
+
   onApplicationBootstrap() {
+    // Use ConfigService to get Redis connection details
+    const redisHost = this.configService.get<string>('REDIS_HOST');
+    const redisPort = this.configService.get<number>('REDIS_PORT');
     this.redisClient = new Redis({
-      host: 'localhost',
-      port: 6373,
+      host: redisHost,
+      port: redisPort,
+      // password: this.configService.get<string>('REDIS_PASSWORD'), // Ensure this line is commented out or removed
     });
   }
   onApplicationShutdown() {
@@ -50,15 +58,15 @@ export class RefreshTokenIdsStorage
    */
   async validate(userId: number, tokenId: string): Promise<boolean> {
     const storedId = await this.redisClient.get(this.getKey(userId));
-    
+
     if (storedId === null) {
       throw new InvalidatedRefreshTokenError();
     }
-    
+
     if (storedId !== tokenId) {
       throw new InvalidatedRefreshTokenError();
     }
-    
+
     return true;
   }
 

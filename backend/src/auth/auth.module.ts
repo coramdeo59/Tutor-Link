@@ -23,16 +23,16 @@ import { RolesGuard } from './authentication/guards/roles/roles.guard';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: AuthenticationGuard, 
+      useClass: AuthenticationGuard,
     },
     {
       provide: APP_GUARD,
-      useClass:RolesGuard, 
+      useClass: RolesGuard,
     },
     AuthenticationService,
     RefreshTokenIdsStorage,
     AccessTokenGuard,
-    { 
+    {
       provide: HashingService,
       useClass: BcryptService,
     },

@@ -61,10 +61,10 @@ describe('AuthenticationController', () => {
       };
 
       const result = await controller.signUp(signUpDto);
-      
+
       // Verify that service method was called with correct parameters
       expect(authService.signUp).toHaveBeenCalledWith(signUpDto);
-      
+
       // Verify the response
       expect(result).toEqual(mockSignupResponse);
       expect(result.name).toBe(signUpDto.name);
@@ -81,10 +81,10 @@ describe('AuthenticationController', () => {
       };
 
       const result = await controller.signIn(signInDto);
-      
+
       // Verify that service method was called with correct parameters
       expect(authService.signIn).toHaveBeenCalledWith(signInDto);
-      
+
       // Verify the response
       expect(result).toEqual(mockSigninResponse);
       expect(result.accessToken).toBeDefined();

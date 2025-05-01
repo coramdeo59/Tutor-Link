@@ -35,16 +35,19 @@ export class AuthenticationService {
 
   async signUp(signUpDto: SignUpDto) {
     try {
-      const { name, email, password, role } = signUpDto;
+      const { FirstName, LastName, email, password, role } = signUpDto;
       const hashedPassword = await this.hashingService.hash(password);
 
       return await this.database
         .insert(schema.users)
         .values({
-          name,
-          email,
-          password: hashedPassword,
-          role: role || Role.Regular,
+          FirstName,
+          LastName,
+          Email: email,
+          Password: hashedPassword,
+          Role: role || Role.Regular,
+          AddressID: 1, // Default AddressID
+          UserType: 'student', // Default UserType
         })
         .returning();
     } catch (err) {
@@ -54,51 +57,68 @@ export class AuthenticationService {
       throw err;
     }
   }
+
   async signIn(signInDto: SignInDto) {
     const user = await this.database.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, signInDto.email),
+      where: (users, { eq }) => eq(users.Email, signInDto.email),
     });
     if (!user) {
       throw new UnauthorizedException('User does not exist');
     }
     const isEqual = await this.hashingService.compare(
       signInDto.password,
-      user.password,
+      user.Password
     );
 
     if (!isEqual) {
       throw new UnauthorizedException('Password does not match');
     }
 
-    return await this.generateTokens(user);
+    // Transform the user object to match the expected structure
+    const transformedUser = {
+      id: user.UserID,
+      name: `${user.FirstName} ${user.LastName}`.trim(),
+      email: user.Email,
+      password: user.Password,
+      role: user.Role ?? Role.Regular,
+      createdAt: user.CreatedAt,
+    };
+
+    return await this.generateTokens(transformedUser);
   }
 
-  public async generateTokens(user: { id: number; name: string; email: string; password: string; role: string; createdAt?: Date | null; }) {
+  public async generateTokens(user: {
+    id: number;
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    createdAt?: Date | null;
+  }) {
     const refreshTokenId = randomUUID();
-    
+
     // Convert string role to enum
     const userRole = user.role as Role;
-    
+
     const [accessToken, refreshToken] = await Promise.all([
       this.signToken<Partial<ActiveUserData>>(
         user.id,
         this.jwtConfiguration.accessTokenTtl,
-        { email: user.email, role: userRole }
+        { email: user.email, role: userRole },
       ),
       this.signToken<Partial<ActiveUserData>>(
-        user.id, 
+        user.id,
         this.jwtConfiguration.refreshTokenTtl,
-        { refreshTokenId }
+        { refreshTokenId },
       ),
     ]);
-    
-    // Store the refresh token ID with expiration
+
     await this.refreshTokenIdsStorage.insert(
       user.id,
       refreshTokenId,
       this.jwtConfiguration.refreshTokenTtl
     );
-    
+
     return {
       accessToken,
       refreshToken,
@@ -113,31 +133,37 @@ export class AuthenticationService {
           audience: this.jwtConfiguration.audience,
           issuer: this.jwtConfiguration.issuer,
           secret: this.jwtConfiguration.secret,
-        }
+        },
       );
-      
+
       const { sub, refreshTokenId } = payload;
-      
+
       if (!refreshTokenId) {
         throw new UnauthorizedException('Refresh token ID not found');
       }
-      
-      
+
       await this.refreshTokenIdsStorage.validate(sub, refreshTokenId);
-      
-      // Invalidate the current refresh token
       await this.refreshTokenIdsStorage.invalidate(sub, refreshTokenId);
-      
+
       const user = await this.database.query.users.findFirst({
-        where: (users, { eq }) => eq(users.id, sub),
+        where: (users, { eq }) => eq(users.UserID, sub),
       });
-      
+
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
-      
-      return this.generateTokens(user);
-        
+
+      // Transform the user object to match the expected structure
+      const transformedUser = {
+        id: user.UserID,
+        name: `${user.FirstName} ${user.LastName}`.trim(),
+        email: user.Email,
+        password: user.Password,
+        role: user.Role ?? Role.Regular,
+        createdAt: user.CreatedAt,
+      };
+
+      return this.generateTokens(transformedUser);
     } catch (error) {
       if (error instanceof InvalidatedRefreshTokenError) {
         throw error;

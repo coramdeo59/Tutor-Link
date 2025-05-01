@@ -7,4 +7,4 @@ export class InvalidatedRefreshTokenError extends UnauthorizedException {
   constructor() {
     super('Refresh token is invalid or has been revoked');
   }
-} 
+}
