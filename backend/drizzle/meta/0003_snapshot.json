@@ -1,0 +1,1157 @@
+{
+  "id": "a8867d3e-e811-4541-9a2c-6c42ba427a5c",
+  "prevId": "8dcebc02-be8d-423a-8ad6-8b36d2794092",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.Address": {
+      "name": "Address",
+      "schema": "",
+      "columns": {
+        "AddressID": {
+          "name": "AddressID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "AddressLine1": {
+          "name": "AddressLine1",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "AddressLine2": {
+          "name": "AddressLine2",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "CountryID": {
+          "name": "CountryID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ProvinceID": {
+          "name": "ProvinceID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "City": {
+          "name": "City",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Phone": {
+          "name": "Phone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ZipCode": {
+          "name": "ZipCode",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Address_CountryID_Country_CountryID_fk": {
+          "name": "Address_CountryID_Country_CountryID_fk",
+          "tableFrom": "Address",
+          "tableTo": "Country",
+          "columnsFrom": [
+            "CountryID"
+          ],
+          "columnsTo": [
+            "CountryID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "Address_ProvinceID_Province_ProvinceID_fk": {
+          "name": "Address_ProvinceID_Province_ProvinceID_fk",
+          "tableFrom": "Address",
+          "tableTo": "Province",
+          "columnsFrom": [
+            "ProvinceID"
+          ],
+          "columnsTo": [
+            "ProvinceID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Country": {
+      "name": "Country",
+      "schema": "",
+      "columns": {
+        "CountryID": {
+          "name": "CountryID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "CountryName": {
+          "name": "CountryName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Province": {
+      "name": "Province",
+      "schema": "",
+      "columns": {
+        "ProvinceID": {
+          "name": "ProvinceID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "CountryID": {
+          "name": "CountryID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ProvinceName": {
+          "name": "ProvinceName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "Province_CountryID_Country_CountryID_fk": {
+          "name": "Province_CountryID_Country_CountryID_fk",
+          "tableFrom": "Province",
+          "tableTo": "Country",
+          "columnsFrom": [
+            "CountryID"
+          ],
+          "columnsTo": [
+            "CountryID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorDetails": {
+      "name": "TutorDetails",
+      "schema": "",
+      "columns": {
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "BirthDate": {
+          "name": "BirthDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Certified": {
+          "name": "Certified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Major": {
+          "name": "Major",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "EducationInstitution": {
+          "name": "EducationInstitution",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GraduationYear": {
+          "name": "GraduationYear",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "WorkTitle": {
+          "name": "WorkTitle",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "WorkInstitution": {
+          "name": "WorkInstitution",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorDetails_TutorID_User_UserID_fk": {
+          "name": "TutorDetails_TutorID_User_UserID_fk",
+          "tableFrom": "TutorDetails",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.User": {
+      "name": "User",
+      "schema": "",
+      "columns": {
+        "UserID": {
+          "name": "UserID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "Email": {
+          "name": "Email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Password": {
+          "name": "Password",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "FirstName": {
+          "name": "FirstName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "LastName": {
+          "name": "LastName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "UserType": {
+          "name": "UserType",
+          "type": "user_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Photo": {
+          "name": "Photo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "AddressID": {
+          "name": "AddressID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "CreatedAt": {
+          "name": "CreatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "Role": {
+          "name": "Role",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'regular'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "User_AddressID_Address_AddressID_fk": {
+          "name": "User_AddressID_Address_AddressID_fk",
+          "tableFrom": "User",
+          "tableTo": "Address",
+          "columnsFrom": [
+            "AddressID"
+          ],
+          "columnsTo": [
+            "AddressID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "User_Email_unique": {
+          "name": "User_Email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "Email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.StudentParent": {
+      "name": "StudentParent",
+      "schema": "",
+      "columns": {
+        "StudentID": {
+          "name": "StudentID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ParentID": {
+          "name": "ParentID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "StudentParent_StudentID_User_UserID_fk": {
+          "name": "StudentParent_StudentID_User_UserID_fk",
+          "tableFrom": "StudentParent",
+          "tableTo": "User",
+          "columnsFrom": [
+            "StudentID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "StudentParent_ParentID_User_UserID_fk": {
+          "name": "StudentParent_ParentID_User_UserID_fk",
+          "tableFrom": "StudentParent",
+          "tableTo": "User",
+          "columnsFrom": [
+            "ParentID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "StudentParent_StudentID_ParentID_pk": {
+          "name": "StudentParent_StudentID_ParentID_pk",
+          "columns": [
+            "StudentID",
+            "ParentID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.StudentSubjectGrade": {
+      "name": "StudentSubjectGrade",
+      "schema": "",
+      "columns": {
+        "StudentID": {
+          "name": "StudentID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "SubjectID": {
+          "name": "SubjectID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GradeID": {
+          "name": "GradeID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "StudentSubjectGrade_StudentID_User_UserID_fk": {
+          "name": "StudentSubjectGrade_StudentID_User_UserID_fk",
+          "tableFrom": "StudentSubjectGrade",
+          "tableTo": "User",
+          "columnsFrom": [
+            "StudentID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "StudentSubjectGrade_SubjectID_Subject_SubjectID_fk": {
+          "name": "StudentSubjectGrade_SubjectID_Subject_SubjectID_fk",
+          "tableFrom": "StudentSubjectGrade",
+          "tableTo": "Subject",
+          "columnsFrom": [
+            "SubjectID"
+          ],
+          "columnsTo": [
+            "SubjectID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "StudentSubjectGrade_GradeID_Grade_GradeID_fk": {
+          "name": "StudentSubjectGrade_GradeID_Grade_GradeID_fk",
+          "tableFrom": "StudentSubjectGrade",
+          "tableTo": "Grade",
+          "columnsFrom": [
+            "GradeID"
+          ],
+          "columnsTo": [
+            "GradeID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "StudentSubjectGrade_StudentID_SubjectID_GradeID_pk": {
+          "name": "StudentSubjectGrade_StudentID_SubjectID_GradeID_pk",
+          "columns": [
+            "StudentID",
+            "SubjectID",
+            "GradeID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorEducation": {
+      "name": "TutorEducation",
+      "schema": "",
+      "columns": {
+        "EducationID": {
+          "name": "EducationID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Major": {
+          "name": "Major",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "EducationInstitution": {
+          "name": "EducationInstitution",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GraduationYear": {
+          "name": "GraduationYear",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorEducation_TutorID_User_UserID_fk": {
+          "name": "TutorEducation_TutorID_User_UserID_fk",
+          "tableFrom": "TutorEducation",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorSubjects": {
+      "name": "TutorSubjects",
+      "schema": "",
+      "columns": {
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "SubjectID": {
+          "name": "SubjectID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GradeID": {
+          "name": "GradeID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorSubjects_TutorID_User_UserID_fk": {
+          "name": "TutorSubjects_TutorID_User_UserID_fk",
+          "tableFrom": "TutorSubjects",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorSubjects_SubjectID_Subject_SubjectID_fk": {
+          "name": "TutorSubjects_SubjectID_Subject_SubjectID_fk",
+          "tableFrom": "TutorSubjects",
+          "tableTo": "Subject",
+          "columnsFrom": [
+            "SubjectID"
+          ],
+          "columnsTo": [
+            "SubjectID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorSubjects_GradeID_Grade_GradeID_fk": {
+          "name": "TutorSubjects_GradeID_Grade_GradeID_fk",
+          "tableFrom": "TutorSubjects",
+          "tableTo": "Grade",
+          "columnsFrom": [
+            "GradeID"
+          ],
+          "columnsTo": [
+            "GradeID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "TutorSubjects_TutorID_SubjectID_GradeID_pk": {
+          "name": "TutorSubjects_TutorID_SubjectID_GradeID_pk",
+          "columns": [
+            "TutorID",
+            "SubjectID",
+            "GradeID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorWorkExperience": {
+      "name": "TutorWorkExperience",
+      "schema": "",
+      "columns": {
+        "WorkExperienceID": {
+          "name": "WorkExperienceID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "WorkTitle": {
+          "name": "WorkTitle",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "WorkInstitution": {
+          "name": "WorkInstitution",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "StartDate": {
+          "name": "StartDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "EndDate": {
+          "name": "EndDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorWorkExperience_TutorID_User_UserID_fk": {
+          "name": "TutorWorkExperience_TutorID_User_UserID_fk",
+          "tableFrom": "TutorWorkExperience",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.EducationType": {
+      "name": "EducationType",
+      "schema": "",
+      "columns": {
+        "EducationTypeID": {
+          "name": "EducationTypeID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "EducationTypeName": {
+          "name": "EducationTypeName",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Grade": {
+      "name": "Grade",
+      "schema": "",
+      "columns": {
+        "GradeID": {
+          "name": "GradeID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "GradeName": {
+          "name": "GradeName",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Subject": {
+      "name": "Subject",
+      "schema": "",
+      "columns": {
+        "SubjectID": {
+          "name": "SubjectID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "SubjectName": {
+          "name": "SubjectName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorDegree": {
+      "name": "TutorDegree",
+      "schema": "",
+      "columns": {
+        "DegreeID": {
+          "name": "DegreeID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Photo": {
+          "name": "Photo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "EducationTypeID": {
+          "name": "EducationTypeID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "StartDate": {
+          "name": "StartDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "EndDate": {
+          "name": "EndDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorDegree_TutorID_User_UserID_fk": {
+          "name": "TutorDegree_TutorID_User_UserID_fk",
+          "tableFrom": "TutorDegree",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorDegree_EducationTypeID_EducationType_EducationTypeID_fk": {
+          "name": "TutorDegree_EducationTypeID_EducationType_EducationTypeID_fk",
+          "tableFrom": "TutorDegree",
+          "tableTo": "EducationType",
+          "columnsFrom": [
+            "EducationTypeID"
+          ],
+          "columnsTo": [
+            "EducationTypeID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorIDDocument": {
+      "name": "TutorIDDocument",
+      "schema": "",
+      "columns": {
+        "DocumentID": {
+          "name": "DocumentID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "PhotoFront": {
+          "name": "PhotoFront",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "PhotoBack": {
+          "name": "PhotoBack",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "CountryID": {
+          "name": "CountryID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ProvinceID": {
+          "name": "ProvinceID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Type": {
+          "name": "Type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "DocumentNumber": {
+          "name": "DocumentNumber",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorIDDocument_TutorID_User_UserID_fk": {
+          "name": "TutorIDDocument_TutorID_User_UserID_fk",
+          "tableFrom": "TutorIDDocument",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorIDDocument_CountryID_Country_CountryID_fk": {
+          "name": "TutorIDDocument_CountryID_Country_CountryID_fk",
+          "tableFrom": "TutorIDDocument",
+          "tableTo": "Country",
+          "columnsFrom": [
+            "CountryID"
+          ],
+          "columnsTo": [
+            "CountryID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorIDDocument_ProvinceID_Province_ProvinceID_fk": {
+          "name": "TutorIDDocument_ProvinceID_Province_ProvinceID_fk",
+          "tableFrom": "TutorIDDocument",
+          "tableTo": "Province",
+          "columnsFrom": [
+            "ProvinceID"
+          ],
+          "columnsTo": [
+            "ProvinceID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorSubjectGrade": {
+      "name": "TutorSubjectGrade",
+      "schema": "",
+      "columns": {
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "SubjectID": {
+          "name": "SubjectID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GradeID": {
+          "name": "GradeID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorSubjectGrade_TutorID_User_UserID_fk": {
+          "name": "TutorSubjectGrade_TutorID_User_UserID_fk",
+          "tableFrom": "TutorSubjectGrade",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorSubjectGrade_SubjectID_Subject_SubjectID_fk": {
+          "name": "TutorSubjectGrade_SubjectID_Subject_SubjectID_fk",
+          "tableFrom": "TutorSubjectGrade",
+          "tableTo": "Subject",
+          "columnsFrom": [
+            "SubjectID"
+          ],
+          "columnsTo": [
+            "SubjectID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorSubjectGrade_GradeID_Grade_GradeID_fk": {
+          "name": "TutorSubjectGrade_GradeID_Grade_GradeID_fk",
+          "tableFrom": "TutorSubjectGrade",
+          "tableTo": "Grade",
+          "columnsFrom": [
+            "GradeID"
+          ],
+          "columnsTo": [
+            "GradeID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "TutorSubjectGrade_TutorID_SubjectID_GradeID_pk": {
+          "name": "TutorSubjectGrade_TutorID_SubjectID_GradeID_pk",
+          "columns": [
+            "TutorID",
+            "SubjectID",
+            "GradeID"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.TutorTeachingLicense": {
+      "name": "TutorTeachingLicense",
+      "schema": "",
+      "columns": {
+        "LicenseID": {
+          "name": "LicenseID",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "TutorID": {
+          "name": "TutorID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Photo": {
+          "name": "Photo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "IssueBody": {
+          "name": "IssueBody",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "IssuingCountryID": {
+          "name": "IssuingCountryID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "IssuerProvinceID": {
+          "name": "IssuerProvinceID",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "Subtype": {
+          "name": "Subtype",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "CertificationName": {
+          "name": "CertificationName",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "SubjectArea": {
+          "name": "SubjectArea",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "GradeLevel": {
+          "name": "GradeLevel",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "IssueDate": {
+          "name": "IssueDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ExpirationDate": {
+          "name": "ExpirationDate",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "TutorTeachingLicense_TutorID_User_UserID_fk": {
+          "name": "TutorTeachingLicense_TutorID_User_UserID_fk",
+          "tableFrom": "TutorTeachingLicense",
+          "tableTo": "User",
+          "columnsFrom": [
+            "TutorID"
+          ],
+          "columnsTo": [
+            "UserID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorTeachingLicense_IssuingCountryID_Country_CountryID_fk": {
+          "name": "TutorTeachingLicense_IssuingCountryID_Country_CountryID_fk",
+          "tableFrom": "TutorTeachingLicense",
+          "tableTo": "Country",
+          "columnsFrom": [
+            "IssuingCountryID"
+          ],
+          "columnsTo": [
+            "CountryID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "TutorTeachingLicense_IssuerProvinceID_Province_ProvinceID_fk": {
+          "name": "TutorTeachingLicense_IssuerProvinceID_Province_ProvinceID_fk",
+          "tableFrom": "TutorTeachingLicense",
+          "tableTo": "Province",
+          "columnsFrom": [
+            "IssuerProvinceID"
+          ],
+          "columnsTo": [
+            "ProvinceID"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.user_type": {
+      "name": "user_type",
+      "schema": "public",
+      "values": [
+        "tutor",
+        "student",
+        "parent"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

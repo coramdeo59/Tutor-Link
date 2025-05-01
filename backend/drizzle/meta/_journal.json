@@ -22,6 +22,13 @@
       "when": 1744740156021,
       "tag": "0002_hot_black_bird",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1745947258399,
+      "tag": "0003_fearless_nightcrawler",
+      "breakpoints": true
     }
   ]
 }
