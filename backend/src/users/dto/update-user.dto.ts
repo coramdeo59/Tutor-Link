@@ -4,7 +4,7 @@ export class UpdateUserDto {
   Email?: string;
   Password?: string;
   UserType?: 'tutor' | 'student' | 'parent';
-  AddressID?: number;
+  addressId?: number;
   Photo?: string;
   Role?: string;
 }
