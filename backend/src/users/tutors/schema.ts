@@ -2,287 +2,247 @@ import {
   pgTable,
   serial,
   varchar,
-  boolean,
   integer,
-  date,
+  timestamp,
   primaryKey,
+  index,
+  text,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../schema';
-import { Country, Province } from '../addres/schema';
+import { countries, states } from '../address/schema';
 
-
-// TutorDetails Table
-export const tutorDetails = pgTable('TutorDetails', {
-  TutorID: integer('TutorID')
+// Tutor base table
+export const tutors = pgTable('tutors', {
+  tutorId: integer('tutor_id')
     .primaryKey()
-    .references(() => users.UserID),
-  BirthDate: date('BirthDate').notNull(),
-  Certified: boolean('Certified').notNull(),
-  Major: varchar('Major', { length: 100 }).notNull(),
-  EducationInstitution: varchar('EducationInstitution', {
-    length: 255,
-  }).notNull(),
-  GraduationYear: integer('GraduationYear').notNull(),
-  WorkTitle: varchar('WorkTitle', { length: 100 }).notNull(),
-  WorkInstitution: varchar('WorkInstitution', { length: 255 }).notNull(),
+    .references(() => users.userId, { onDelete: 'cascade' }),
+  bio: text('bio'),
+  hourlyRate: integer('hourly_rate').notNull(),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// TutorSubjectGrade Table
-export const tutorSubjectGrade = pgTable(
-  'TutorSubjectGrade',
+// Core Tutor Tables
+export const tutorSubjects = pgTable(
+  'tutor_subjects',
   {
-    TutorID: integer('TutorID')
-      .notNull()
-      .references(() => users.UserID),
-    SubjectID: integer('SubjectID')
-      .notNull()
-      .references(() => subjects.SubjectID),
-    GradeID: integer('GradeID')
-      .notNull()
-      .references(() => gradeLevels.GradeID),
+    tutorId: integer('tutor_id').notNull(),
+    subjectId: integer('subject_id').notNull(),
+    gradeId: integer('grade_id').notNull(),
   },
-  (table) => {
-    return {
-      pk: primaryKey(table.TutorID, table.SubjectID, table.GradeID),
-    };
-  },
+  (table) => ({
+    pk: primaryKey(table.tutorId, table.subjectId, table.gradeId),
+    tutorIdx: index('tutor_subjects_tutor_idx').on(table.tutorId),
+    subjectIdx: index('tutor_subjects_subject_idx').on(table.subjectId),
+    gradeIdx: index('tutor_subjects_grade_idx').on(table.gradeId),
+  }),
 );
 
-// TutorSubjects Table
-export const TutorSubjects = pgTable(
-  'TutorSubjects',
+export const tutorWorkExperiences = pgTable(
+  'tutor_work_experiences',
   {
-    TutorID: integer('TutorID')
-      .notNull()
-      .references(() => users.UserID),
-    SubjectID: integer('SubjectID')
-      .notNull()
-      .references(() => subjects.SubjectID),
-    GradeID: integer('GradeID')
-      .notNull()
-      .references(() => gradeLevels.GradeID),
+    workExperienceId: serial('work_experience_id').primaryKey(),
+    tutorId: integer('tutor_id').notNull(),
+    workTitle: varchar('work_title', { length: 100 }).notNull(),
+    workInstitution: varchar('work_institution', { length: 255 }).notNull(),
+    startDate: timestamp('start_date').notNull(),
+    endDate: timestamp('end_date'),
   },
-  (table) => {
-    return {
-      pk: primaryKey(table.TutorID, table.SubjectID, table.GradeID),
-    };
-  },
+  (table) => ({
+    tutorIdx: index('tutor_work_experiences_tutor_idx').on(table.tutorId),
+  }),
 );
 
-// TutorWorkExperience Table
-export const TutorWorkExperience = pgTable('TutorWorkExperience', {
-  WorkExperienceID: serial('WorkExperienceID').primaryKey(),
-  TutorID: integer('TutorID')
-    .notNull()
-    .references(() => users.UserID),
-  WorkTitle: varchar('WorkTitle', { length: 100 }).notNull(),
-  WorkInstitution: varchar('WorkInstitution', { length: 255 }).notNull(),
-  StartDate: date('StartDate').notNull(),
-  EndDate: date('EndDate'),
+export const tutorEducations = pgTable(
+  'tutor_educations',
+  {
+    educationId: serial('education_id').primaryKey(),
+    tutorId: integer('tutor_id').notNull(),
+    major: varchar('major', { length: 100 }).notNull(),
+    educationInstitution: varchar('education_institution', {
+      length: 255,
+    }).notNull(),
+    graduationYear: integer('graduation_year').notNull(),
+    educationTypeId: integer('education_type_id').notNull(),
+    startDate: timestamp('start_date'),
+    endDate: timestamp('end_date'),
+    photo: varchar('photo', { length: 255 }),
+  },
+  (table) => ({
+    tutorIdx: index('tutor_educations_tutor_idx').on(table.tutorId),
+    typeIdx: index('tutor_educations_type_idx').on(table.educationTypeId),
+  }),
+);
+
+export const tutorIdDocuments = pgTable(
+  'tutor_id_documents',
+  {
+    documentId: serial('document_id').primaryKey(),
+    tutorId: integer('tutor_id').notNull(),
+    photoFront: varchar('photo_front', { length: 255 }).notNull(),
+    photoBack: varchar('photo_back', { length: 255 }).notNull(),
+    countryId: integer('country_id')
+      .notNull()
+      .references(() => countries.id, { onDelete: 'restrict' }),
+    provinceId: integer('province_id')
+      .notNull()
+      .references(() => states.id, { onDelete: 'restrict' }),
+    type: varchar('type', { length: 50 }).notNull(),
+    documentNumber: varchar('document_number', { length: 100 }).notNull(),
+  },
+  (table) => ({
+    tutorIdx: index('tutor_id_documents_tutor_idx').on(table.tutorId),
+    countryIdx: index('tutor_id_documents_country_idx').on(table.countryId),
+    provinceIdx: index('tutor_id_documents_province_idx').on(table.provinceId),
+  }),
+);
+
+export const tutorTeachingLicenses = pgTable(
+  'tutor_teaching_licenses',
+  {
+    licenseId: serial('license_id').primaryKey(),
+    tutorId: integer('tutor_id').notNull(),
+    photo: varchar('photo', { length: 255 }).notNull(),
+    issueBody: varchar('issue_body', { length: 255 }).notNull(),
+    issuingCountryId: integer('issuing_country_id')
+      .notNull()
+      .references(() => countries.id, { onDelete: 'restrict' }),
+    issuerProvinceId: integer('issuer_province_id')
+      .notNull()
+      .references(() => states.id, { onDelete: 'restrict' }),
+    subtype: varchar('subtype', { length: 50 }).notNull(),
+    certificationName: varchar('certification_name', { length: 100 }).notNull(),
+    subjectArea: varchar('subject_area', { length: 100 }).notNull(),
+    gradeLevel: varchar('grade_level', { length: 50 }).notNull(),
+    issueDate: timestamp('issue_date').notNull(),
+    expirationDate: timestamp('expiration_date').notNull(),
+  },
+  (table) => ({
+    tutorIdx: index('tutor_teaching_licenses_tutor_idx').on(table.tutorId),
+    countryIdx: index('tutor_teaching_licenses_country_idx').on(
+      table.issuingCountryId,
+    ),
+    provinceIdx: index('tutor_teaching_licenses_province_idx').on(
+      table.issuerProvinceId,
+    ),
+  }),
+);
+
+export const subjects = pgTable('subjects', {
+  subjectId: serial('subject_id').primaryKey(),
+  subjectName: varchar('subject_name', { length: 100 }).notNull(),
 });
 
-// TutorEducation Table
-export const TutorEducation = pgTable('TutorEducation', {
-  EducationID: serial('EducationID').primaryKey(),
-  TutorID: integer('TutorID')
-    .notNull()
-    .references(() => users.UserID),
-  Major: varchar('Major', { length: 100 }).notNull(),
-  EducationInstitution: varchar('EducationInstitution', {
-    length: 255,
-  }).notNull(),
-  GraduationYear: integer('GraduationYear').notNull(),
+export const gradeLevels = pgTable('grade_levels', {
+  gradeId: serial('grade_id').primaryKey(),
+  gradeName: varchar('grade_name', { length: 50 }).notNull(),
 });
 
-// TutorIDDocument Table
-export const tutorIDDocument = pgTable('TutorIDDocument', {
-  DocumentID: serial('DocumentID').primaryKey(),
-  TutorID: integer('TutorID')
-    .notNull()
-    .references(() => users.UserID),
-  PhotoFront: varchar('PhotoFront', { length: 255 }).notNull(),
-  PhotoBack: varchar('PhotoBack', { length: 255 }).notNull(),
-  CountryID: integer('CountryID')
-    .notNull()
-    .references(() => Country.CountryID),
-  ProvinceID: integer('ProvinceID')
-    .notNull()
-    .references(() => Province.ProvinceID),
-  Type: varchar('Type', { length: 50 }).notNull(),
-  DocumentNumber: varchar('DocumentNumber', { length: 100 }).notNull(),
-});
-
-// TutorDegree Table
-export const tutorDegree = pgTable('TutorDegree', {
-  DegreeID: serial('DegreeID').primaryKey(),
-  TutorID: integer('TutorID')
-    .notNull()
-    .references(() => users.UserID),
-  Photo: varchar('Photo', { length: 255 }).notNull(),
-  EducationTypeID: integer('EducationTypeID')
-    .notNull()
-    .references(() => educationType.EducationTypeID),
-  StartDate: date('StartDate').notNull(),
-  EndDate: date('EndDate').notNull(),
-});
-
-// TutorTeachingLicense Table
-export const tutorTeachingLicense = pgTable('TutorTeachingLicense', {
-  LicenseID: serial('LicenseID').primaryKey(),
-  TutorID: integer('TutorID')
-    .notNull()
-    .references(() => users.UserID),
-  Photo: varchar('Photo', { length: 255 }).notNull(),
-  IssueBody: varchar('IssueBody', { length: 255 }).notNull(),
-  IssuingCountryID: integer('IssuingCountryID')
-    .notNull()
-    .references(() => Country.CountryID),
-  IssuerProvinceID: integer('IssuerProvinceID')
-    .notNull()
-    .references(() => Province.ProvinceID),
-  Subtype: varchar('Subtype', { length: 50 }).notNull(),
-  CertificationName: varchar('CertificationName', { length: 100 }).notNull(),
-  SubjectArea: varchar('SubjectArea', { length: 100 }).notNull(),
-  GradeLevel: varchar('GradeLevel', { length: 50 }).notNull(),
-  IssueDate: date('IssueDate').notNull(),
-  ExpirationDate: date('ExpirationDate').notNull(),
-});
-
-// Subjects table
-export const subjects = pgTable('Subject', {
-  SubjectID: serial('SubjectID').primaryKey(),
-  SubjectName: varchar('SubjectName', { length: 100 }).notNull(),
-});
-
-// Grade levels table
-export const gradeLevels = pgTable('Grade', {
-  GradeID: serial('GradeID').primaryKey(),
-  GradeName: varchar('GradeName', { length: 50 }).notNull(),
-});
-
-// Education Types table
-export const educationType = pgTable('EducationType', {
-  EducationTypeID: serial('EducationTypeID').primaryKey(),
-  EducationTypeName: varchar('EducationTypeName', { length: 50 }).notNull(),
+export const educationTypes = pgTable('education_types', {
+  educationTypeId: serial('education_type_id').primaryKey(),
+  educationTypeName: varchar('education_type_name', { length: 50 }).notNull(),
 });
 
 // Relations
-export const tutorDetailsRelations = relations(tutorDetails, ({ one }) => ({
+export const tutorRelations = relations(tutors, ({ one, many }) => ({
   user: one(users, {
-    fields: [tutorDetails.TutorID],
-    references: [users.UserID],
+    fields: [tutors.tutorId],
+    references: [users.userId],
   }),
+  subjects: many(tutorSubjects),
+  workExperiences: many(tutorWorkExperiences),
+  educations: many(tutorEducations),
+  idDocuments: many(tutorIdDocuments),
+  teachingLicenses: many(tutorTeachingLicenses),
 }));
 
-export const tutorSubjectGradeRelations = relations(
-  tutorSubjectGrade,
-  ({ one }) => ({
-    tutor: one(users, {
-      fields: [tutorSubjectGrade.TutorID],
-      references: [users.UserID],
-    }),
-    subject: one(subjects, {
-      fields: [tutorSubjectGrade.SubjectID],
-      references: [subjects.SubjectID],
-    }),
-    grade: one(gradeLevels, {
-      fields: [tutorSubjectGrade.GradeID],
-      references: [gradeLevels.GradeID],
-    }),
-  }),
-);
-
-// Relations for TutorSubjects
-export const tutorSubjectsRelations = relations(TutorSubjects, ({ one }) => ({
-  tutor: one(users, {
-    fields: [TutorSubjects.TutorID],
-    references: [users.UserID],
+export const tutorSubjectRelations = relations(tutorSubjects, ({ one }) => ({
+  tutor: one(tutors, {
+    fields: [tutorSubjects.tutorId],
+    references: [tutors.tutorId],
   }),
   subject: one(subjects, {
-    fields: [TutorSubjects.SubjectID],
-    references: [subjects.SubjectID],
+    fields: [tutorSubjects.subjectId],
+    references: [subjects.subjectId],
   }),
-  grade: one(gradeLevels, {
-    fields: [TutorSubjects.GradeID],
-    references: [gradeLevels.GradeID],
+  gradeLevel: one(gradeLevels, {
+    fields: [tutorSubjects.gradeId],
+    references: [gradeLevels.gradeId],
   }),
 }));
 
-// Relations for TutorWorkExperience
 export const tutorWorkExperienceRelations = relations(
-  TutorWorkExperience,
+  tutorWorkExperiences,
   ({ one }) => ({
-    tutor: one(users, {
-      fields: [TutorWorkExperience.TutorID],
-      references: [users.UserID],
+    tutor: one(tutors, {
+      fields: [tutorWorkExperiences.tutorId],
+      references: [tutors.tutorId],
     }),
   }),
 );
 
-// Relations for TutorEducation
-export const tutorEducationRelations = relations(TutorEducation, ({ one }) => ({
-  tutor: one(users, {
-    fields: [TutorEducation.TutorID],
-    references: [users.UserID],
-  }),
-}));
-
-export const tutorIDDocumentRelations = relations(
-  tutorIDDocument,
+export const tutorEducationRelations = relations(
+  tutorEducations,
   ({ one }) => ({
-    tutor: one(users, {
-      fields: [tutorIDDocument.TutorID],
-      references: [users.UserID],
+    tutor: one(tutors, {
+      fields: [tutorEducations.tutorId],
+      references: [tutors.tutorId],
     }),
-    country: one(Country, {
-      fields: [tutorIDDocument.CountryID],
-      references: [Country.CountryID],
-    }),
-    province: one(Province, {
-      fields: [tutorIDDocument.ProvinceID],
-      references: [Province.ProvinceID],
+    educationType: one(educationTypes, {
+      fields: [tutorEducations.educationTypeId],
+      references: [educationTypes.educationTypeId],
     }),
   }),
 );
 
-export const tutorDegreeRelations = relations(tutorDegree, ({ one }) => ({
-  tutor: one(users, {
-    fields: [tutorDegree.TutorID],
-    references: [users.UserID],
+export const tutorIdDocumentRelations = relations(
+  tutorIdDocuments,
+  ({ one }) => ({
+    tutor: one(tutors, {
+      fields: [tutorIdDocuments.tutorId],
+      references: [tutors.tutorId],
+    }),
+    country: one(countries, {
+      fields: [tutorIdDocuments.countryId],
+      references: [countries.id],
+    }),
+    province: one(states, {
+      fields: [tutorIdDocuments.provinceId],
+      references: [states.id],
+    }),
   }),
-  educationType: one(educationType, {
-    fields: [tutorDegree.EducationTypeID],
-    references: [educationType.EducationTypeID],
-  }),
-}));
+);
 
 export const tutorTeachingLicenseRelations = relations(
-  tutorTeachingLicense,
+  tutorTeachingLicenses,
   ({ one }) => ({
-    tutor: one(users, {
-      fields: [tutorTeachingLicense.TutorID],
-      references: [users.UserID],
+    tutor: one(tutors, {
+      fields: [tutorTeachingLicenses.tutorId],
+      references: [tutors.tutorId],
     }),
-    issuingCountry: one(Country, {
-      fields: [tutorTeachingLicense.IssuingCountryID],
-      references: [Country.CountryID],
+    country: one(countries, {
+      fields: [tutorTeachingLicenses.issuingCountryId],
+      references: [countries.id],
     }),
-    issuerProvince: one(Province, {
-      fields: [tutorTeachingLicense.IssuerProvinceID],
-      references: [Province.ProvinceID],
+    province: one(states, {
+      fields: [tutorTeachingLicenses.issuerProvinceId],
+      references: [states.id],
     }),
   }),
 );
 
-export const subjectsRelations = relations(subjects, ({ many }) => ({
-  tutors: many(tutorSubjectGrade),
+export const subjectRelations = relations(subjects, ({ many }) => ({
+  tutorSubjects: many(tutorSubjects),
 }));
 
-export const gradeLevelsRelations = relations(gradeLevels, ({ many }) => ({
-  tutors: many(tutorSubjectGrade),
+export const gradeLevelRelations = relations(gradeLevels, ({ many }) => ({
+  tutorSubjects: many(tutorSubjects),
+  students: many(require('../students/schema').students),
 }));
 
-export const educationTypeRelations = relations(educationType, ({ many }) => ({
-  tutors: many(tutorDegree),
+export const educationTypeRelations = relations(educationTypes, ({ many }) => ({
+  tutorEducations: many(tutorEducations),
 }));

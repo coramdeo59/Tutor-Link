@@ -1,73 +1,93 @@
-import { pgTable, integer, primaryKey } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  integer,
+  varchar,
+  timestamp,
+  index,
+  primaryKey,
+  serial,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../schema';
-import { subjects, gradeLevels } from '../tutors/schema';
 
+// Subjects table (shared between tutors and students)
+export const subjects = pgTable('subjects', {
+  subjectId: serial('subject_id').primaryKey(),
+  subjectName: varchar('subject_name', { length: 100 }).notNull().unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
 
-export const studentSubjectGrade = pgTable(
-  'StudentSubjectGrade',
+// Grade Levels table (corrected naming)
+export const gradeLevels = pgTable('grade_levels', {
+  gradeId: serial('grade_id').primaryKey(),
+  gradeName: varchar('grade_name', { length: 100 }).notNull().unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// Student tutoring preferences (junction table)
+export const studentSubjects = pgTable(
+  'student_subjects',
   {
-    StudentID: integer('StudentID')
+    studentId: integer('student_id')
       .notNull()
-      .references(() => users.UserID),
-    SubjectID: integer('SubjectID')
+      .references(() => students.studentId, { onDelete: 'cascade' }),
+    subjectId: integer('subject_id')
       .notNull()
-      .references(() => subjects.SubjectID),
-    GradeID: integer('GradeID')
-      .notNull()
-      .references(() => gradeLevels.GradeID),
+      .references(() => subjects.subjectId, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
   },
-  (table) => {
-    return {
-      pk: primaryKey(table.StudentID, table.SubjectID, table.GradeID),
-    };
-  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.studentId, table.subjectId] }),
+    subjectIdx: index('student_subjects_subject_idx').on(table.subjectId),
+  }),
 );
 
-
-export const studentParent = pgTable(
-  'StudentParent',
+// Students table with proper structure
+export const students = pgTable(
+  'students',
   {
-    StudentID: integer('StudentID')
-      .notNull()
-      .references(() => users.UserID),
-    ParentID: integer('ParentID')
-      .notNull()
-      .references(() => users.UserID),
+    studentId: integer('student_id')
+      .primaryKey()
+      .references(() => users.userId, { onDelete: 'cascade' }),
+    gradeLevelId: integer('grade_level_id').references(
+      () => gradeLevels.gradeId,
+      { onDelete: 'restrict' },
+    ),
+    schoolName: varchar('school_name', { length: 255 }),
+    enrollmentDate: timestamp('enrollment_date').notNull().defaultNow(),
+    graduationYear: integer('graduation_year'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => {
-    return {
-      pk: primaryKey(table.StudentID, table.ParentID),
-    };
-  },
+  (table) => ({
+    gradeIdx: index('students_grade_idx').on(table.gradeLevelId),
+    schoolIdx: index('students_school_idx').on(table.schoolName),
+  }),
 );
 
+// Relations
+export const studentRelations = relations(students, ({ one, many }) => ({
+  user: one(users, {
+    fields: [students.studentId],
+    references: [users.userId],
+  }),
+  gradeLevel: one(gradeLevels, {
+    fields: [students.gradeLevelId],
+    references: [gradeLevels.gradeId],
+  }),
+  subjects: many(studentSubjects),
+}));
 
-export const studentSubjectGradeRelations = relations(
-  studentSubjectGrade,
+export const studentSubjectRelations = relations(
+  studentSubjects,
   ({ one }) => ({
-    student: one(users, {
-      fields: [studentSubjectGrade.StudentID],
-      references: [users.UserID],
+    student: one(students, {
+      fields: [studentSubjects.studentId],
+      references: [students.studentId],
     }),
     subject: one(subjects, {
-      fields: [studentSubjectGrade.SubjectID],
-      references: [subjects.SubjectID],
-    }),
-    grade: one(gradeLevels, {
-      fields: [studentSubjectGrade.GradeID],
-      references: [gradeLevels.GradeID],
+      fields: [studentSubjects.subjectId],
+      references: [subjects.subjectId],
     }),
   }),
 );
-
-export const studentParentRelations = relations(studentParent, ({ one }) => ({
-  student: one(users, {
-    fields: [studentParent.StudentID],
-    references: [users.UserID],
-  }),
-  parent: one(users, {
-    fields: [studentParent.ParentID],
-    references: [users.UserID],
-  }),
-}));

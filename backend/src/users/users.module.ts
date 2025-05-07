@@ -1,22 +1,23 @@
 import { Module } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { DatabaseModule } from 'src/database/database.module';
 import { TutorsController } from './tutors/tutors.controller';
-import { TutorsService } from './tutors/tutors.service';
 import { StudentsController } from './students/students.controller';
+import { TutorsService } from './tutors/tutors.service';
 import { StudentsService } from './students/students.service';
-import { ParentController } from './parent/parent.controller';
-import { ParentService } from './parent/parent.service';
+import { CoreModule } from 'src/core/core.module';
+import { AddressController } from './address/addres.controller';
+import { AddressService } from './address/address.service';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [CoreModule],
   controllers: [
     UsersController,
     TutorsController,
     StudentsController,
-    ParentController,
+    AddressController,
   ],
-  providers: [UsersService, TutorsService, StudentsService, ParentService],
+  providers: [UsersService, TutorsService, StudentsService, AddressService],
+  exports: [UsersService],
 })
 export class UsersModule {}

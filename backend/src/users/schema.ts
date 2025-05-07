@@ -1,49 +1,46 @@
 import {
   pgTable,
   varchar,
-  timestamp,
-  pgEnum,
   integer,
   serial,
-  date,
-  boolean,
+  timestamp,
+  pgEnum,
 } from 'drizzle-orm/pg-core';
-import { Address } from './addres/schema';
+import { addresses } from './address/schema';
 import { relations } from 'drizzle-orm';
-import { Role } from './enums/role-enums';
+import { students } from './students/schema'; // Import students schema
 
-export const userTypeEnum = pgEnum('user_type', ['tutor', 'student', 'parent']);
+export const roleEnum = pgEnum('role_enum', ['admin', 'regular']);
 
-export const users = pgTable('User', {
-  UserID: serial('UserID').primaryKey(),
-  Email: varchar('Email', { length: 255 }).notNull().unique(),
-  Password: varchar('Password', { length: 255 }).notNull(),
-  FirstName: varchar('FirstName', { length: 100 }).notNull(),
-  LastName: varchar('LastName', { length: 100 }).notNull(),
-  UserType: userTypeEnum('UserType').notNull(),
-  Photo: varchar('Photo', { length: 255 }),
-  AddressID: integer('AddressID')
+export const userTypeEnum = pgEnum('user_type_enum', [
+  'tutor',
+  'student',
+  'parent',
+]);
+
+export const users = pgTable('users', {
+  userId: serial('user_id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  password: varchar('password', { length: 255 }).notNull(),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  photo: varchar('photo', { length: 255 }),
+  addressId: integer('address_id')
     .notNull()
-    .references(() => Address.id),
-  CreatedAt: timestamp('CreatedAt').defaultNow(),
-  Role: varchar('Role', { length: 50 }).default(Role.Regular),
+    .references(() => addresses.id),
+  userType: userTypeEnum('user_type').notNull(),
+  role: roleEnum('role').notNull().default('regular'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  address: one(Address, {
-    fields: [users.AddressID],
-    references: [Address.id],
+export const userRelations = relations(users, ({ one }) => ({
+  address: one(addresses, {
+    fields: [users.addressId],
+    references: [addresses.id],
+  }),
+  student: one(students, {
+    fields: [users.userId],
+    references: [students.studentId],
   }),
 }));
-
-// TutorDetails Table
-export const tutorDetails = pgTable('TutorDetails', {
-    TutorID: integer('TutorID').primaryKey().references(() => users.UserID),
-    BirthDate: date('BirthDate').notNull(),
-    Certified: boolean('Certified').notNull(),
-    Major: varchar('Major', { length: 100 }).notNull(),
-    EducationInstitution: varchar('EducationInstitution', { length: 255 }).notNull(),
-    GraduationYear: integer('GraduationYear').notNull(),
-    WorkTitle: varchar('WorkTitle', { length: 100 }).notNull(),
-    WorkInstitution: varchar('WorkInstitution', { length: 255 }).notNull(),
-});
