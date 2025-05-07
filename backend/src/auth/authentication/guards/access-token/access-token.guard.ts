@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import jwtConfig from 'src/auth/config/jwt.config';
+import jwtConfig from 'src/config/jwt.config';
 import { Request } from 'express';
 import { REQUEST_USER_KEY } from 'src/auth/request-user-key';
 @Injectable()

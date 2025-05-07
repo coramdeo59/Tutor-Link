@@ -1,25 +1,28 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../../users/schema';
-import { DATABASE_CONNECTION } from 'src/database/database-connection';
+import { Role } from 'src/users/enums/role-enums';
+import { DATABASE_CONNECTION } from 'src/core/database-connection';
 import { HashingService } from '../hashing/hashing.service';
-import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
-import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
 import { SignInDto } from './dto/sign-in.dto/sign-in.dto';
 import { JwtService } from '@nestjs/jwt';
-import jwtConfig from '../config/jwt.config';
+import jwtConfig from '../../config/jwt.config';
 import { ConfigType } from '@nestjs/config';
 import { ActiveUserData } from '../interfaces/active-user-data.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-token-ids.storage';
 import { randomUUID } from 'crypto';
 import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-token.exception';
-import { Role } from '../../users/enums/role-enums';
+import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
+import { AddressService } from '../../users/address/address.service'; // Import AddressService
+import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
 
 @Injectable()
 export class AuthenticationService {
@@ -31,57 +34,78 @@ export class AuthenticationService {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly refreshTokenIdsStorage: RefreshTokenIdsStorage,
+    private readonly addressService: AddressService, // Inject AddressService
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
     try {
-      const { FirstName, LastName, email, password, role } = signUpDto;
+      const {
+        firstName,
+        lastName,
+        email,
+        password,
+        address,
+        photo,
+        userType,
+        role,
+      } = signUpDto;
+
+      // Create address first
+      const addressId = await this.addressService.createAddress(address);
+
       const hashedPassword = await this.hashingService.hash(password);
 
-      return await this.database
+      const newUser = await this.database
         .insert(schema.users)
         .values({
-          FirstName,
-          LastName,
-          Email: email,
-          Password: hashedPassword,
-          Role: role || Role.Regular,
-          AddressID: 1, // Default AddressID
-          UserType: 'student', // Default UserType
+          firstName,
+          lastName,
+          email,
+          password: hashedPassword,
+          addressId,
+          photo,
+          role: role as Role,
+          userType,
         })
         .returning();
+
+      return newUser[0];
     } catch (err) {
       if (err.code === pgUniqueViolationsErrorCode) {
         throw new ConflictException('Email already exists');
       }
-      throw err;
+      if (err.code === '23503' && err.constraint === 'users_address_id_fkey') {
+        throw new BadRequestException('Invalid address ID provided.');
+      }
+      throw new InternalServerErrorException('User registration failed');
     }
   }
 
   async signIn(signInDto: SignInDto) {
     const user = await this.database.query.users.findFirst({
-      where: (users, { eq }) => eq(users.Email, signInDto.email),
+      where: (User, { eq }) => eq(User.email, signInDto.email),
     });
+
     if (!user) {
       throw new UnauthorizedException('User does not exist');
     }
+
     const isEqual = await this.hashingService.compare(
       signInDto.password,
-      user.Password
+      user.password,
     );
 
     if (!isEqual) {
       throw new UnauthorizedException('Password does not match');
     }
 
-    // Transform the user object to match the expected structure
     const transformedUser = {
-      id: user.UserID,
-      name: `${user.FirstName} ${user.LastName}`.trim(),
-      email: user.Email,
-      password: user.Password,
-      role: user.Role ?? Role.Regular,
-      createdAt: user.CreatedAt,
+      id: user.userId,
+      name: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email,
+      password: user.password,
+      role: user.userType,
+      createdAt: user.createdAt,
     };
 
     return await this.generateTokens(transformedUser);
@@ -97,7 +121,6 @@ export class AuthenticationService {
   }) {
     const refreshTokenId = randomUUID();
 
-    // Convert string role to enum
     const userRole = user.role as Role;
 
     const [accessToken, refreshToken] = await Promise.all([
@@ -116,7 +139,7 @@ export class AuthenticationService {
     await this.refreshTokenIdsStorage.insert(
       user.id,
       refreshTokenId,
-      this.jwtConfiguration.refreshTokenTtl
+      this.jwtConfiguration.refreshTokenTtl,
     );
 
     return {
@@ -146,21 +169,20 @@ export class AuthenticationService {
       await this.refreshTokenIdsStorage.invalidate(sub, refreshTokenId);
 
       const user = await this.database.query.users.findFirst({
-        where: (users, { eq }) => eq(users.UserID, sub),
+        where: (User, { eq }) => eq(User.userId, sub),
       });
 
       if (!user) {
         throw new UnauthorizedException('User not found');
       }
 
-      // Transform the user object to match the expected structure
       const transformedUser = {
-        id: user.UserID,
-        name: `${user.FirstName} ${user.LastName}`.trim(),
-        email: user.Email,
-        password: user.Password,
-        role: user.Role ?? Role.Regular,
-        createdAt: user.CreatedAt,
+        id: user.userId,
+        name: `${user.firstName} ${user.lastName}`.trim(),
+        email: user.email,
+        password: user.password,
+        role: user.userType,
+        createdAt: user.createdAt,
       };
 
       return this.generateTokens(transformedUser);

@@ -1,84 +1,48 @@
-import {
-  Injectable,
-  OnApplicationBootstrap,
-  OnApplicationShutdown,
-} from '@nestjs/common';
-import Redis from 'ioredis';
+import { Inject, Injectable } from '@nestjs/common';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '../../../users/schema';
+import { refreshTokens } from './schema';
+import { DATABASE_CONNECTION } from 'src/core/database-connection';
 import { InvalidatedRefreshTokenError } from '../exceptions/invalidated-refresh-token.exception';
-import { ConfigService } from '@nestjs/config'; // Import ConfigService
+import { eq, and, gt } from 'drizzle-orm';
 
 @Injectable()
-export class RefreshTokenIdsStorage
-  implements OnApplicationBootstrap, OnApplicationShutdown
-{
-  private redisClient: Redis;
+export class RefreshTokenIdsStorage {
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly database: NodePgDatabase<typeof schema & { refreshTokens: typeof refreshTokens }>,
+  ) {}
 
-  constructor(private readonly configService: ConfigService) {} // Inject ConfigService
-
-  onApplicationBootstrap() {
-    // Use ConfigService to get Redis connection details
-    const redisHost = this.configService.get<string>('REDIS_HOST');
-    const redisPort = this.configService.get<number>('REDIS_PORT');
-    this.redisClient = new Redis({
-      host: redisHost,
-      port: redisPort,
-      // password: this.configService.get<string>('REDIS_PASSWORD'), // Ensure this line is commented out or removed
+  async insert(userId: number, tokenId: string, ttl: number): Promise<void> {
+    const expiresAt = new Date(Date.now() + ttl * 1000);
+    await this.database.insert(refreshTokens).values({
+      userId,
+      tokenId,
+      expiresAt,
     });
   }
-  onApplicationShutdown() {
-    return this.redisClient.quit();
-  }
 
-  /**
-   * Generates a Redis key for storing a refresh token ID
-   * @param userId The user ID
-   * @param tokenId The refresh token ID
-   * @returns The formatted Redis key
-   */
-  private getKey(userId: number): string {
-    return `refresh-token:${userId}`;
-  }
-
-  /**
-   * Inserts a refresh token ID into Redis with an expiration time
-   * @param userId The user ID
-   * @param tokenId The refresh token ID
-   * @param ttl Time to live in seconds
-   */
-  async insert(userId: number, tokenId: string, ttl: number): Promise<void> {
-    await this.redisClient.set(this.getKey(userId), tokenId, 'EX', ttl);
-  }
-
-  /**
-   * Validates if a refresh token ID exists and is valid
-   * @param userId The user ID
-   * @param tokenId The refresh token ID
-   * @returns Boolean indicating if the token is valid
-   * @throws InvalidatedRefreshTokenError if the token is invalid
-   */
   async validate(userId: number, tokenId: string): Promise<boolean> {
-    const storedId = await this.redisClient.get(this.getKey(userId));
-
-    if (storedId === null) {
+    const now = new Date();
+    const token = await this.database.select().from(refreshTokens).where(
+      and(
+        eq(refreshTokens.userId, userId),
+        eq(refreshTokens.tokenId, tokenId),
+        gt(refreshTokens.expiresAt, now)
+      )
+    ).limit(1);
+    if (!token || token.length === 0) {
       throw new InvalidatedRefreshTokenError();
     }
-
-    if (storedId !== tokenId) {
-      throw new InvalidatedRefreshTokenError();
-    }
-
     return true;
   }
 
-  /**
-   * Invalidates a refresh token by removing it from Redis
-   * @param userId The user ID
-   * @param tokenId The refresh token ID to invalidate
-   */
   async invalidate(userId: number, tokenId: string): Promise<void> {
-    // Since we use userId as the key and store only one token per user,
-    // we just delete the Redis key regardless of the tokenId
-    const key = this.getKey(userId);
-    await this.redisClient.del(key);
+    await this.database.delete(refreshTokens).where(
+      and(
+        eq(refreshTokens.userId, userId),
+        eq(refreshTokens.tokenId, tokenId)
+      )
+    );
   }
 }
