@@ -5,5 +5,7 @@ export const refreshTokens = pgTable('refresh_tokens', {
   userId: integer('user_id').notNull(),
   tokenId: uuid('token_id').notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });

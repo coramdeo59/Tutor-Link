@@ -20,10 +20,10 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-token-ids.storage';
 import { randomUUID } from 'crypto';
 import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-token.exception';
-import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
-import { AddressService } from '../../users/address/address.service'; // Import AddressService
+import { SignUpDto, UserType } from './dto/sign-up.dto/sign-up.dto';
+import { AddressService } from '../../users/address/address.service';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
-
+import { students } from '../../users/students/schema';
 @Injectable()
 export class AuthenticationService {
   constructor(
@@ -34,7 +34,7 @@ export class AuthenticationService {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly refreshTokenIdsStorage: RefreshTokenIdsStorage,
-    private readonly addressService: AddressService, // Inject AddressService
+    private readonly addressService: AddressService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -69,7 +69,27 @@ export class AuthenticationService {
         })
         .returning();
 
-      return newUser[0];
+      if (!Array.isArray(newUser) || newUser.length === 0) {
+        throw new InternalServerErrorException(
+          'Failed to create user: No data returned after insert.',
+        );
+      }
+      const createdUser = newUser[0];
+
+      if (!createdUser || typeof createdUser.userId === 'undefined') {
+        throw new InternalServerErrorException(
+          'Failed to create user: User ID is undefined after insert.',
+        );
+      }
+
+      if (userType === UserType.STUDENT) {
+        await this.database
+          .insert(students)
+          .values({ studentId: createdUser.userId, gradeLevelId: null })
+          .onConflictDoNothing();
+      }
+
+      return createdUser;
     } catch (err) {
       if (err.code === pgUniqueViolationsErrorCode) {
         throw new ConflictException('Email already exists');

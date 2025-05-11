@@ -10,7 +10,9 @@ import { eq, and, gt } from 'drizzle-orm';
 export class RefreshTokenIdsStorage {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly database: NodePgDatabase<typeof schema & { refreshTokens: typeof refreshTokens }>,
+    private readonly database: NodePgDatabase<
+      typeof schema & { refreshTokens: typeof refreshTokens }
+    >,
   ) {}
 
   async insert(userId: number, tokenId: string, ttl: number): Promise<void> {
@@ -24,13 +26,17 @@ export class RefreshTokenIdsStorage {
 
   async validate(userId: number, tokenId: string): Promise<boolean> {
     const now = new Date();
-    const token = await this.database.select().from(refreshTokens).where(
-      and(
-        eq(refreshTokens.userId, userId),
-        eq(refreshTokens.tokenId, tokenId),
-        gt(refreshTokens.expiresAt, now)
+    const token = await this.database
+      .select()
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          eq(refreshTokens.tokenId, tokenId),
+          gt(refreshTokens.expiresAt, now),
+        ),
       )
-    ).limit(1);
+      .limit(1);
     if (!token || token.length === 0) {
       throw new InvalidatedRefreshTokenError();
     }
@@ -38,11 +44,13 @@ export class RefreshTokenIdsStorage {
   }
 
   async invalidate(userId: number, tokenId: string): Promise<void> {
-    await this.database.delete(refreshTokens).where(
-      and(
-        eq(refreshTokens.userId, userId),
-        eq(refreshTokens.tokenId, tokenId)
-      )
-    );
+    await this.database
+      .delete(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          eq(refreshTokens.tokenId, tokenId),
+        ),
+      );
   }
 }

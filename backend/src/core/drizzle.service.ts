@@ -3,9 +3,6 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../users/schema';
 import { DATABASE_CONNECTION } from './database-connection';
 
-/**
- * Service that provides access to the Drizzle ORM database instance
- */
 @Injectable()
 export class DrizzleService {
   constructor(
