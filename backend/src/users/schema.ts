@@ -8,7 +8,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import { addresses } from './address/schema';
 import { relations } from 'drizzle-orm';
-import { students } from './students/schema'; // Import students schema
+import { students } from './students/schema';
+import { tutors } from './tutors/schema';
 
 export const roleEnum = pgEnum('role_enum', ['admin', 'regular']);
 
@@ -42,5 +43,9 @@ export const userRelations = relations(users, ({ one }) => ({
   student: one(students, {
     fields: [users.userId],
     references: [students.studentId],
+  }),
+  tutor: one(tutors, {
+    fields: [users.userId],
+    references: [tutors.tutorId],
   }),
 }));

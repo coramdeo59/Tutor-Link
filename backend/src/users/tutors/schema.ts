@@ -11,7 +11,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../schema';
-import { countries, states } from '../address/schema';
+import { subjects, gradeLevels } from '../SubjectGrade/schema'; // Updated import
 
 // Tutor base table
 export const tutors = pgTable('tutors', {
@@ -19,7 +19,6 @@ export const tutors = pgTable('tutors', {
     .primaryKey()
     .references(() => users.userId, { onDelete: 'cascade' }),
   bio: text('bio'),
-  hourlyRate: integer('hourly_rate').notNull(),
   isVerified: boolean('is_verified').default(false).notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -84,19 +83,14 @@ export const tutorIdDocuments = pgTable(
     tutorId: integer('tutor_id').notNull(),
     photoFront: varchar('photo_front', { length: 255 }).notNull(),
     photoBack: varchar('photo_back', { length: 255 }).notNull(),
-    countryId: integer('country_id')
-      .notNull()
-      .references(() => countries.id, { onDelete: 'restrict' }),
-    provinceId: integer('province_id')
-      .notNull()
-      .references(() => states.id, { onDelete: 'restrict' }),
+    countryName: varchar('country_name', { length: 100 }).notNull(), // Changed from countryId
+    provinceName: varchar('province_name', { length: 100 }).notNull(), // Changed from provinceId
     type: varchar('type', { length: 50 }).notNull(),
     documentNumber: varchar('document_number', { length: 100 }).notNull(),
   },
   (table) => ({
     tutorIdx: index('tutor_id_documents_tutor_idx').on(table.tutorId),
-    countryIdx: index('tutor_id_documents_country_idx').on(table.countryId),
-    provinceIdx: index('tutor_id_documents_province_idx').on(table.provinceId),
+    // Removed countryIdx and provinceIdx
   }),
 );
 
@@ -107,13 +101,12 @@ export const tutorTeachingLicenses = pgTable(
     tutorId: integer('tutor_id').notNull(),
     photo: varchar('photo', { length: 255 }).notNull(),
     issueBody: varchar('issue_body', { length: 255 }).notNull(),
-    issuingCountryId: integer('issuing_country_id')
-      .notNull()
-      .references(() => countries.id, { onDelete: 'restrict' }),
-    issuerProvinceId: integer('issuer_province_id')
-      .notNull()
-      .references(() => states.id, { onDelete: 'restrict' }),
-    subtype: varchar('subtype', { length: 50 }).notNull(),
+    issuingCountryName: varchar('issuing_country_name', {
+      length: 100,
+    }).notNull(),
+    issuerProvinceName: varchar('issuer_province_name', {
+      length: 100,
+    }).notNull(),
     certificationName: varchar('certification_name', { length: 100 }).notNull(),
     subjectArea: varchar('subject_area', { length: 100 }).notNull(),
     gradeLevel: varchar('grade_level', { length: 50 }).notNull(),
@@ -122,24 +115,9 @@ export const tutorTeachingLicenses = pgTable(
   },
   (table) => ({
     tutorIdx: index('tutor_teaching_licenses_tutor_idx').on(table.tutorId),
-    countryIdx: index('tutor_teaching_licenses_country_idx').on(
-      table.issuingCountryId,
-    ),
-    provinceIdx: index('tutor_teaching_licenses_province_idx').on(
-      table.issuerProvinceId,
-    ),
+    // Removed countryIdx and provinceIdx
   }),
 );
-
-export const subjects = pgTable('subjects', {
-  subjectId: serial('subject_id').primaryKey(),
-  subjectName: varchar('subject_name', { length: 100 }).notNull(),
-});
-
-export const gradeLevels = pgTable('grade_levels', {
-  gradeId: serial('grade_id').primaryKey(),
-  gradeName: varchar('grade_name', { length: 50 }).notNull(),
-});
 
 export const educationTypes = pgTable('education_types', {
   educationTypeId: serial('education_type_id').primaryKey(),
@@ -165,10 +143,12 @@ export const tutorSubjectRelations = relations(tutorSubjects, ({ one }) => ({
     references: [tutors.tutorId],
   }),
   subject: one(subjects, {
+    // Ensure this 'subjects' refers to the one from ../schema
     fields: [tutorSubjects.subjectId],
     references: [subjects.subjectId],
   }),
   gradeLevel: one(gradeLevels, {
+    // Ensure this 'gradeLevels' refers to the one from ../schema
     fields: [tutorSubjects.gradeId],
     references: [gradeLevels.gradeId],
   }),
@@ -205,14 +185,6 @@ export const tutorIdDocumentRelations = relations(
       fields: [tutorIdDocuments.tutorId],
       references: [tutors.tutorId],
     }),
-    country: one(countries, {
-      fields: [tutorIdDocuments.countryId],
-      references: [countries.id],
-    }),
-    province: one(states, {
-      fields: [tutorIdDocuments.provinceId],
-      references: [states.id],
-    }),
   }),
 );
 
@@ -223,25 +195,8 @@ export const tutorTeachingLicenseRelations = relations(
       fields: [tutorTeachingLicenses.tutorId],
       references: [tutors.tutorId],
     }),
-    country: one(countries, {
-      fields: [tutorTeachingLicenses.issuingCountryId],
-      references: [countries.id],
-    }),
-    province: one(states, {
-      fields: [tutorTeachingLicenses.issuerProvinceId],
-      references: [states.id],
-    }),
   }),
 );
-
-export const subjectRelations = relations(subjects, ({ many }) => ({
-  tutorSubjects: many(tutorSubjects),
-}));
-
-export const gradeLevelRelations = relations(gradeLevels, ({ many }) => ({
-  tutorSubjects: many(tutorSubjects),
-  students: many(require('../students/schema').students),
-}));
 
 export const educationTypeRelations = relations(educationTypes, ({ many }) => ({
   tutorEducations: many(tutorEducations),

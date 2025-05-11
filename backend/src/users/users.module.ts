@@ -8,9 +8,12 @@ import { StudentsService } from './students/students.service';
 import { CoreModule } from 'src/core/core.module';
 import { AddressController } from './address/addres.controller';
 import { AddressService } from './address/address.service';
+import { StudentsModule } from './students/students.module';
+import { AuthModule } from '../auth/auth.module';
+import { SubjectGradeModule } from './SubjectGrade/SubjectGrade.module';
 
 @Module({
-  imports: [CoreModule],
+  imports: [CoreModule, StudentsModule, AuthModule, SubjectGradeModule],
   controllers: [
     UsersController,
     TutorsController,
