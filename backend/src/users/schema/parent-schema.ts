@@ -8,7 +8,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './User-schema';
-import { gradeLevels } from './SubjectGrade-schema'; 
+import { gradeLevels } from './SubjectGrade-schema';
 
 // Parents Table
 export const parents = pgTable('parents', {
@@ -30,12 +30,12 @@ export const children = pgTable('children', {
     () => gradeLevels.gradeId,
     { onDelete: 'set null' },
   ),
-  userId: integer('user_id') 
-    .references(() => users.userId, { onDelete: 'set null' }),
+  userId: integer('user_id').references(() => users.userId, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
-
 
 export const parentRelations = relations(parents, ({ one, many }) => ({
   user: one(users, {
@@ -45,17 +45,16 @@ export const parentRelations = relations(parents, ({ one, many }) => ({
   children: many(children),
 }));
 
-
 export const childRelations = relations(children, ({ one }) => ({
   parent: one(parents, {
     fields: [children.parentId],
     references: [parents.parentId],
   }),
-  user: one(users, { 
+  user: one(users, {
     fields: [children.userId],
     references: [users.userId],
   }),
-  gradeLevel: one(gradeLevels, { 
+  gradeLevel: one(gradeLevels, {
     fields: [children.gradeLevelId],
     references: [gradeLevels.gradeId],
   }),

@@ -7,15 +7,12 @@ import {
   pgEnum,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { addresses } from './Address-schema'; 
-import { tutors } from './Tutor-schema'; 
+import { addresses } from './Address-schema';
+import { tutors } from './Tutor-schema';
 
 export const roleEnum = pgEnum('role_enum', ['admin', 'regular']);
 
-export const userTypeEnum = pgEnum('user_type_enum', [
-  'tutor',
-  'parent',
-]);
+export const userTypeEnum = pgEnum('user_type_enum', ['tutor', 'parent']);
 
 export const users = pgTable('users', {
   userId: serial('user_id').primaryKey(),
@@ -24,9 +21,7 @@ export const users = pgTable('users', {
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   photo: varchar('photo', { length: 255 }),
-  addressId: integer('address_id')
-    .notNull()
-    .references(() => addresses.id),
+  addressId: integer('address_id').references(() => addresses.id),
   userType: userTypeEnum('user_type').notNull(),
   role: roleEnum('role').notNull().default('regular'),
   createdAt: timestamp('created_at').defaultNow(),
