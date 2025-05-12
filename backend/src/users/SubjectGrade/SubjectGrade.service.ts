@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from './schema';
+import * as schema from '../schema/SubjectGrade-schema';
 import { DATABASE_CONNECTION } from '../../core/database-connection';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { CreateGradeLevelDto } from './dto/create-grade-level.dto';
