@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '../../users/schema';
+import * as userSchema from '../../users/schema/User-schema';
 import { Role } from 'src/users/enums/role-enums';
 import { DATABASE_CONNECTION } from 'src/core/database-connection';
 import { HashingService } from '../hashing/hashing.service';
@@ -20,14 +20,18 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-token-ids.storage';
 import { randomUUID } from 'crypto';
 import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-token.exception';
-import { SignUpDto, UserType } from './dto/sign-up.dto/sign-up.dto';
+import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
 import { AddressService } from '../../users/address/address.service';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
+import { eq } from 'drizzle-orm';
+
 @Injectable()
 export class AuthenticationService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly database: NodePgDatabase<typeof schema>,
+    private readonly database: NodePgDatabase<{
+      users: typeof userSchema.users;
+    }>,
     private readonly hashingService: HashingService,
     private readonly jwtService: JwtService,
     @Inject(jwtConfig.KEY)
@@ -49,31 +53,28 @@ export class AuthenticationService {
         role,
       } = signUpDto;
 
-      // Create address first
-      const addressId = await this.addressService.createAddress(address);
-
       const hashedPassword = await this.hashingService.hash(password);
 
-      const newUser = await this.database
-        .insert(schema.users)
+      const newUserResult = await this.database
+        .insert(userSchema.users)
         .values({
           firstName,
           lastName,
           email,
           password: hashedPassword,
-          addressId,
+          addressId: null,
           photo,
           role: role as Role,
           userType,
         })
         .returning();
 
-      if (!Array.isArray(newUser) || newUser.length === 0) {
+      if (!Array.isArray(newUserResult) || newUserResult.length === 0) {
         throw new InternalServerErrorException(
           'Failed to create user: No data returned after insert.',
         );
       }
-      const createdUser = newUser[0];
+      const createdUser = newUserResult[0];
 
       if (!createdUser || typeof createdUser.userId === 'undefined') {
         throw new InternalServerErrorException(
@@ -81,11 +82,15 @@ export class AuthenticationService {
         );
       }
 
-      if (userType === UserType.STUDENT) {
+      if (address) {
+        const addressId = await this.addressService.create(
+          createdUser.userId,
+          address,
+        );
         await this.database
-          .insert(students)
-          .values({ studentId: createdUser.userId, gradeLevelId: null })
-          .onConflictDoNothing();
+          .update(userSchema.users)
+          .set({ addressId: addressId })
+          .where(eq(userSchema.users.userId, createdUser.userId));
       }
 
       return createdUser;
@@ -96,6 +101,7 @@ export class AuthenticationService {
       if (err.code === '23503' && err.constraint === 'users_address_id_fkey') {
         throw new BadRequestException('Invalid address ID provided.');
       }
+      console.error('Signup Error:', err);
       throw new InternalServerErrorException('User registration failed');
     }
   }

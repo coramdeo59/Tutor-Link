@@ -1,15 +1,12 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config'; // Import ConfigModule
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as userSchema from '../users/schema';
-import * as addressSchema from '../users/address/schema';
-import * as studentSchema from '../users/students/schema';
-// import * as tutorSchema from '../users/tutors/schema';
+import * as userSchema from '../users/schema/User-schema';
+import * as addressSchema from '../users/schema/Address-schema';
 import { DrizzleService } from './drizzle.service';
 import { DATABASE_CONNECTION } from './database-connection';
 import databaseConfig from '../config/databse-config';
-import { allRelations } from './relations'; // Import the centralized relations
 
 @Global()
 @Module({
@@ -50,9 +47,7 @@ import { allRelations } from './relations'; // Import the centralized relations
           schema: {
             ...userSchema,
             ...addressSchema,
-            ...studentSchema,
             // ...tutorSchema, // Schemas themselves
-            ...allRelations, // All relations combined
           },
         });
       },

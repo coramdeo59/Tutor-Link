@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '../../../users/schema';
+import * as schema from '../../../users/schema/Address-schema';
 import { refreshTokens } from './schema';
 import { DATABASE_CONNECTION } from 'src/core/database-connection';
 import { InvalidatedRefreshTokenError } from '../exceptions/invalidated-refresh-token.exception';

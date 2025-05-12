@@ -17,7 +17,7 @@ import { AddressModule } from '../users/address/address.module'; // Corrected im
   imports: [
     JwtModule.registerAsync(jwtConfig.asProvider()),
     ConfigModule.forFeature(jwtConfig),
-    AddressModule, // Add AddressModule here
+    AddressModule,
   ],
   controllers: [AuthenticationController],
   providers: [

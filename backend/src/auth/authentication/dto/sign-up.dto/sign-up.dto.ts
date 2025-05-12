@@ -7,12 +7,11 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateAddressDto } from 'src/users/address/dtos/create-address.dto';
 import { Role } from 'src/users/enums/role-enums';
+import { AddressDto } from 'src/users/address/dtos/address.dto';
 
 export enum UserType {
   TUTOR = 'tutor',
-  STUDENT = 'student',
   PARENT = 'parent',
 }
 
@@ -37,8 +36,8 @@ export class SignUpDto {
   photo?: string;
 
   @ValidateNested()
-  @Type(() => CreateAddressDto)
-  address: CreateAddressDto; //
+  @Type(() => AddressDto)
+  address: AddressDto;
 
   @IsEnum(UserType)
   userType: UserType;
