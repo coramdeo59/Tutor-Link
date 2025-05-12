@@ -23,7 +23,6 @@ import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-t
 import { SignUpDto, UserType } from './dto/sign-up.dto/sign-up.dto';
 import { AddressService } from '../../users/address/address.service';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
-import { students } from '../../users/students/schema';
 @Injectable()
 export class AuthenticationService {
   constructor(
