@@ -3,144 +3,291 @@ import {
   Inject,
   InternalServerErrorException,
   NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from './schema';
-import { CreateAddressDto } from './dtos/create-address.dto'; // Import CreateAddressDto
+import * as addressSchema from '../schema/Address-schema';
+import { UpsertAddressDto } from './dtos/upsert-address.dto';
 import { DATABASE_CONNECTION } from 'src/core/database-connection';
-import { eq, and } from 'drizzle-orm'; // Import 'and' for combined queries
-import { StateDto } from './dtos/state.dto';
-import { CountryWithStatesDto } from './dtos/country-with-states.dto';
+import { SQL, eq, and, like } from 'drizzle-orm';
+import { SearchAddressQueryDto } from './dtos/search-address-query.dto';
+import { AddressResponseDto } from './dtos/address-response.dto';
+import { AddressDto } from './dtos/address.dto';
+
+// Define the address record type from the database schema
+type AddressRecord = typeof addressSchema.addresses.$inferSelect;
 
 @Injectable()
 export class AddressService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly database: NodePgDatabase<typeof schema>,
+    private readonly database: NodePgDatabase<{
+      addresses: typeof addressSchema.addresses;
+    }>,
   ) {}
 
-  private async findOrCreateCountry(countryName: string): Promise<number> {
-    const existingCountry = await this.database.query.countries.findFirst({
-      where: eq(schema.countries.name, countryName),
-    });
-    if (existingCountry) {
-      return existingCountry.id;
-    }
-    const [newCountry] = await this.database
-      .insert(schema.countries)
-      .values({ name: countryName })
-      .returning({ id: schema.countries.id });
-    if (!newCountry) {
-      throw new InternalServerErrorException('Failed to create country');
-    }
-    return newCountry.id;
+  /**
+   * Maps a database address record to the response DTO
+   */
+  private mapToAddressDto(address: AddressRecord): AddressResponseDto | null {
+    if (!address) return null;
+
+    return {
+      id: address.id,
+      userId: address.userId,
+      location: address.location,
+      state: address.state,
+      city: address.city,
+      phoneNumber: address.phoneNumber,
+      street: address.street,
+    };
   }
 
-  private async findOrCreateState(
-    stateName: string,
-    countryId: number,
-  ): Promise<number> {
-    const existingState = await this.database.query.states.findFirst({
-      where: and(
-        eq(schema.states.name, stateName),
-        eq(schema.states.countryId, countryId),
-      ),
-    });
-    if (existingState) {
-      return existingState.id;
-    }
-    const [newState] = await this.database
-      .insert(schema.states)
-      .values({ name: stateName, countryId })
-      .returning({ id: schema.states.id });
-    if (!newState) {
-      throw new InternalServerErrorException('Failed to create state');
-    }
-    return newState.id;
-  }
-
-  async createAddress(createAddressDto: CreateAddressDto): Promise<number> {
-    const {
-      countryName,
-      stateName,
-      cityName,
-      addressLine1,
-      addressLine2,
-      postalCode,
-      phoneNumber,
-    } = createAddressDto;
-
-    const countryId = await this.findOrCreateCountry(countryName);
-
-    let stateId: number | undefined = undefined; // Ensure stateId can be undefined if stateName is not provided
-    if (stateName) {
-      // Only create or find state if stateName is provided
-      stateId = await this.findOrCreateState(stateName, countryId);
-    }
-
-    const [newAddress] = await this.database
-      .insert(schema.addresses)
-      .values({
-        countryId,
-        stateId,
-        city: cityName,
-        addressLine1,
-        addressLine2,
-        postalCode,
-        phoneNumber,
-      })
-      .returning({ id: schema.addresses.id });
-
-    if (!newAddress) {
-      throw new InternalServerErrorException('Failed to create address');
-    }
-    return newAddress.id;
-  }
-
-  async getStatesByCountryName(countryName: string): Promise<StateDto[]> {
-    const country = await this.database.query.countries.findFirst({
-      where: eq(schema.countries.name, countryName),
-      with: {
-        states: true,
-      },
+  /**
+   * Find an address by its ID
+   */
+  async findById(id: number): Promise<AddressResponseDto> {
+    const address = await this.database.query.addresses.findFirst({
+      where: eq(addressSchema.addresses.id, id),
     });
 
-    if (!country) {
-      throw new NotFoundException(
-        `Country with name "${countryName}" not found.`,
+    if (!address) {
+      throw new NotFoundException(`Address with ID ${id} not found`);
+    }
+
+    // Cast the result to the expected type
+    const addressDto = this.mapToAddressDto(address as AddressRecord);
+    if (!addressDto) {
+      throw new InternalServerErrorException('Failed to process address data');
+    }
+    return addressDto;
+  }
+
+  /**
+   * Find an address by user ID
+   */
+  async findByUserId(userId: number): Promise<AddressResponseDto | null> {
+    const address = await this.database.query.addresses.findFirst({
+      where: eq(addressSchema.addresses.userId, userId),
+    });
+
+    // Explicitly handle potential undefined result and cast to correct type
+    return address ? this.mapToAddressDto(address as AddressRecord) : null;
+  }
+
+  /**
+   * Create a new address
+   */
+  async create(
+    userId: number,
+    addressData: AddressDto,
+  ): Promise<AddressResponseDto> {
+    const { location, state, city, phoneNumber, street } = addressData;
+
+    // Validation
+    if (!userId) {
+      throw new Error('User ID is required to create an address.');
+    }
+
+    if (!location) {
+      throw new Error('Location is required to create an address.');
+    }
+
+    const existingAddress = await this.findByUserId(userId);
+    if (existingAddress) {
+      throw new ConflictException(
+        `User with ID ${userId} already has an address.`,
       );
     }
 
-    if (!country.states || country.states.length === 0) {
-      // Or return an empty array if that's preferred & controller handles message
-      // For now, let's adhere to "meaningful message if ... has no states" by throwing
-      // However, the prompt also says "return all corresponding states".
-      // An empty array is a valid representation of "all states" if there are none.
-      // The controller can then decide to return a 204 No Content or a 200 OK with an empty array.
-      // Let's return an empty array from the service.
+    // Insert new address
+    const result = await this.database
+      .insert(addressSchema.addresses)
+      .values({
+        userId, // Use userId from parameter
+        location,
+        state: state || null,
+        city: city || null,
+        phoneNumber: phoneNumber || null,
+        street: street || null,
+      })
+      .returning();
+
+    if (!result[0]) {
+      throw new Error('Failed to create address.');
+    }
+
+    // Cast the database result to AddressResponseDto
+    const addressDto = this.mapToAddressDto(result[0] as AddressRecord);
+    if (!addressDto) {
+      throw new Error('Failed to map created address to DTO.');
+    }
+    return addressDto;
+  }
+
+  /**
+   * Update an existing address
+   */
+  async update(
+    id: number,
+    addressData: Partial<UpsertAddressDto>,
+  ): Promise<AddressResponseDto> {
+    // Check if address exists
+    const existingAddress = await this.database.query.addresses.findFirst({
+      where: eq(addressSchema.addresses.id, id),
+    });
+
+    if (!existingAddress) {
+      throw new NotFoundException(`Address with ID ${id} not found`);
+    }
+
+    const { location, state, city, phoneNumber, street } = addressData;
+
+    // Only update fields that were provided
+    const updateData: Record<string, any> = {};
+
+    if (location !== undefined) updateData.location = location;
+    if (state !== undefined) updateData.state = state;
+    if (city !== undefined) updateData.city = city;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (street !== undefined) updateData.street = street;
+
+    // If no fields to update, return existing address
+    if (Object.keys(updateData).length === 0) {
+      const addressDto = this.mapToAddressDto(existingAddress as AddressRecord);
+      if (!addressDto) {
+        throw new InternalServerErrorException(
+          'Failed to process address data',
+        );
+      }
+      return addressDto;
+    }
+
+    // Update the address
+    const result = await this.database
+      .update(addressSchema.addresses)
+      .set(updateData)
+      .where(eq(addressSchema.addresses.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new InternalServerErrorException('Failed to update address');
+    }
+
+    // Cast the database result to AddressResponseDto
+    const addressDto = this.mapToAddressDto(result[0] as AddressRecord);
+    if (!addressDto) {
+      throw new InternalServerErrorException('Failed to process address data');
+    }
+    return addressDto;
+  }
+
+  /**
+   * Delete an address by ID
+   */
+  async delete(id: number): Promise<boolean> {
+    // Check if address exists
+    const existingAddress = await this.database.query.addresses.findFirst({
+      where: eq(addressSchema.addresses.id, id),
+    });
+
+    if (!existingAddress) {
+      throw new NotFoundException(`Address with ID ${id} not found`);
+    }
+
+    // Delete the address
+    const result = await this.database
+      .delete(addressSchema.addresses)
+      .where(eq(addressSchema.addresses.id, id))
+      .returning({ id: addressSchema.addresses.id });
+
+    // Check if a row was affected by the delete operation
+    return Array.isArray(result) && result.length > 0;
+  }
+
+  /**
+   * Delete an address by user ID
+   */
+  async deleteByUserId(userId: number): Promise<boolean> {
+    const result = await this.database
+      .delete(addressSchema.addresses)
+      .where(eq(addressSchema.addresses.userId, userId))
+      .returning({ id: addressSchema.addresses.id });
+
+    // Check if a row was affected by the delete operation
+    return Array.isArray(result) && result.length > 0;
+  }
+
+  /**
+   * Upsert (create or update) an address for a user
+   */
+  async upsert(
+    userId: number,
+    addressData: UpsertAddressDto,
+  ): Promise<AddressResponseDto> {
+    const { location, state, city, phoneNumber, street } = addressData;
+
+    if (!location) {
+      throw new BadRequestException('Location is required');
+    }
+
+    // Find existing address for user
+    const existingAddress = await this.findByUserId(userId);
+
+    if (existingAddress) {
+      // Update existing address
+      return this.update(existingAddress.id, addressData);
+    } else {
+      // Create new address with AddressDto
+      const newAddressData: AddressDto = {
+        userId,
+        location,
+        state,
+        city,
+        phoneNumber,
+        street,
+      };
+      return this.create(userId, newAddressData);
+    }
+  }
+
+  /**
+   * Search for addresses by criteria
+   */
+  async search(query: SearchAddressQueryDto): Promise<AddressResponseDto[]> {
+    const conditions: SQL[] = [];
+
+    if (query.location) {
+      conditions.push(
+        like(addressSchema.addresses.location, `%${query.location}%`),
+      );
+    }
+
+    if (query.state) {
+      conditions.push(like(addressSchema.addresses.state, `%${query.state}%`));
+    }
+
+    if (query.street) {
+      conditions.push(
+        like(addressSchema.addresses.street, `%${query.street}%`),
+      );
+    }
+
+    // If no conditions, return empty array
+    if (conditions.length === 0) {
       return [];
     }
 
-    return country.states.map((state) => ({
-      id: state.id,
-      name: state.name,
-    }));
-  }
+    // Query addresses
+    const result = await this.database
+      .select()
+      .from(addressSchema.addresses)
+      .where(and(...conditions));
 
-  async getAllCountriesWithStates(): Promise<CountryWithStatesDto[]> {
-    const countriesWithStates = await this.database.query.countries.findMany({
-      with: {
-        states: true,
-      },
-    });
-
-    return countriesWithStates.map((country) => ({
-      id: country.id,
-      name: country.name,
-      states: country.states.map((state) => ({
-        id: state.id,
-        name: state.name,
-      })),
-    }));
+    // Map to DTOs and filter out nulls
+    return result
+      .map((record) => this.mapToAddressDto(record as AddressRecord))
+      .filter((dto): dto is AddressResponseDto => dto !== null);
   }
 }
