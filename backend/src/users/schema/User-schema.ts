@@ -21,7 +21,7 @@ export const users = pgTable('users', {
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   photo: varchar('photo', { length: 255 }),
-  addressId: integer('address_id').references(() => addresses.id),
+  addressId: integer('address_id').notNull().references(() => addresses.id),
   userType: userTypeEnum('user_type').notNull(),
   role: roleEnum('role').notNull().default('regular'),
   createdAt: timestamp('created_at').defaultNow(),

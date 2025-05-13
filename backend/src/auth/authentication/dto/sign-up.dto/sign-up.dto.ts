@@ -7,8 +7,9 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Role } from 'src/users/enums/role-enums';
 import { AddressDto } from 'src/users/address/dtos/address.dto';
+import { Role } from 'src/users/enums/role-enums';
+
 
 export enum UserType {
   TUTOR = 'tutor',

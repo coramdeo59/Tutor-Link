@@ -1,5 +1,5 @@
 {
-  "id": "bbeb2dfb-525e-4050-a92e-104460b839be",
+  "id": "99386a83-cc9d-4d38-b55f-2b53afc03888",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -20,9 +20,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "street": {
-          "name": "street",
+        "address_line_1": {
+          "name": "address_line_1",
           "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
         },
@@ -32,21 +38,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "state_id": {
-          "name": "state_id",
-          "type": "integer",
+        "phone_number": {
+          "name": "phone_number",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
-        "postal_code": {
-          "name": "postal_code",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "country_id": {
-          "name": "country_id",
-          "type": "integer",
+        "street": {
+          "name": "street",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         }
@@ -65,32 +65,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "addresses_state_id_states_id_fk": {
-          "name": "addresses_state_id_states_id_fk",
-          "tableFrom": "addresses",
-          "tableTo": "states",
-          "columnsFrom": [
-            "state_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "addresses_country_id_countries_id_fk": {
-          "name": "addresses_country_id_countries_id_fk",
-          "tableFrom": "addresses",
-          "tableTo": "countries",
-          "columnsFrom": [
-            "country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -99,18 +73,18 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.countries": {
-      "name": "countries",
+    "public.grade_levels": {
+      "name": "grade_levels",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
+        "grade_id": {
+          "name": "grade_id",
           "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "grade_Level": {
+          "name": "grade_Level",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
@@ -120,11 +94,11 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "countries_name_unique": {
-          "name": "countries_name_unique",
+        "grade_levels_grade_Level_unique": {
+          "name": "grade_levels_grade_Level_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "name"
+            "grade_Level"
           ]
         }
       },
@@ -132,8 +106,41 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.states": {
-      "name": "states",
+    "public.subjects": {
+      "name": "subjects",
+      "schema": "",
+      "columns": {
+        "subject_id": {
+          "name": "subject_id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "subject_name": {
+          "name": "subject_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "subjects_subject_name_unique": {
+          "name": "subjects_subject_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "subject_name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tutor_availability_slots": {
+      "name": "tutor_availability_slots",
       "schema": "",
       "columns": {
         "id": {
@@ -142,53 +149,329 @@
           "primaryKey": true,
           "notNull": true
         },
-        "country_id": {
-          "name": "country_id",
+        "tutor_id": {
+          "name": "tutor_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "name": "name",
-          "type": "varchar(100)",
+        "day_of_week": {
+          "name": "day_of_week",
+          "type": "day_of_week_enum",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "start_time": {
+          "name": "start_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_time": {
+          "name": "end_time",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {
-        "state_code_country_unique_idx": {
-          "name": "state_code_country_unique_idx",
+        "tutor_day_slot_idx": {
+          "name": "tutor_day_slot_idx",
           "columns": [
             {
-              "expression": "country_id",
+              "expression": "tutor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "day_of_week",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_time",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "states_country_id_countries_id_fk": {
-          "name": "states_country_id_countries_id_fk",
-          "tableFrom": "states",
-          "tableTo": "countries",
+        "tutor_availability_slots_tutor_id_tutors_tutor_id_fk": {
+          "name": "tutor_availability_slots_tutor_id_tutors_tutor_id_fk",
+          "tableFrom": "tutor_availability_slots",
+          "tableTo": "tutors",
           "columnsFrom": [
-            "country_id"
+            "tutor_id"
           ],
           "columnsTo": [
-            "id"
+            "tutor_id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tutor_subjects": {
+      "name": "tutor_subjects",
+      "schema": "",
+      "columns": {
+        "tutor_id": {
+          "name": "tutor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "tutor_subjects_tutor_idx": {
+          "name": "tutor_subjects_tutor_idx",
+          "columns": [
+            {
+              "expression": "tutor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tutor_subjects_subject_idx": {
+          "name": "tutor_subjects_subject_idx",
+          "columns": [
+            {
+              "expression": "subject_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tutor_subjects_grade_idx": {
+          "name": "tutor_subjects_grade_idx",
+          "columns": [
+            {
+              "expression": "grade_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "tutor_subjects_tutor_id_subject_id_grade_id_pk": {
+          "name": "tutor_subjects_tutor_id_subject_id_grade_id_pk",
+          "columns": [
+            "tutor_id",
+            "subject_id",
+            "grade_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tutors": {
+      "name": "tutors",
+      "schema": "",
+      "columns": {
+        "tutor_id": {
+          "name": "tutor_id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_verified": {
+          "name": "is_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tutors_tutor_id_users_user_id_fk": {
+          "name": "tutors_tutor_id_users_user_id_fk",
+          "tableFrom": "tutors",
+          "tableTo": "users",
+          "columnsFrom": [
+            "tutor_id"
+          ],
+          "columnsTo": [
+            "user_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verification_details": {
+      "name": "verification_details",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tutor_id": {
+          "name": "tutor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_pdf_url": {
+          "name": "document_pdf_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cv_url": {
+          "name": "cv_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kebele_id_url": {
+          "name": "kebele_id_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "national_id_url": {
+          "name": "national_id_url",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fan_number": {
+          "name": "fan_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "verification_details_tutor_id_tutors_tutor_id_fk": {
+          "name": "verification_details_tutor_id_tutors_tutor_id_fk",
+          "tableFrom": "verification_details",
+          "tableTo": "tutors",
+          "columnsFrom": [
+            "tutor_id"
+          ],
+          "columnsTo": [
+            "tutor_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "verification_details_tutor_id_unique": {
+          "name": "verification_details_tutor_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "tutor_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -299,31 +582,48 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.students": {
-      "name": "students",
+    "public.children": {
+      "name": "children",
       "schema": "",
       "columns": {
-        "student_id": {
-          "name": "student_id",
-          "type": "integer",
+        "child_id": {
+          "name": "child_id",
+          "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
-        "school_name": {
-          "name": "school_name",
-          "type": "varchar(255)",
+        "parent_id": {
+          "name": "parent_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_of_birth": {
+          "name": "date_of_birth",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
-        "enrollment_date": {
-          "name": "enrollment_date",
-          "type": "timestamp",
+        "grade_level_id": {
+          "name": "grade_level_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": false
         },
-        "graduation_year": {
-          "name": "graduation_year",
+        "user_id": {
+          "name": "user_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -343,35 +643,45 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "students_school_idx": {
-          "name": "students_school_idx",
-          "columns": [
-            {
-              "expression": "school_name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "students_student_id_users_user_id_fk": {
-          "name": "students_student_id_users_user_id_fk",
-          "tableFrom": "students",
+        "children_parent_id_parents_parent_id_fk": {
+          "name": "children_parent_id_parents_parent_id_fk",
+          "tableFrom": "children",
+          "tableTo": "parents",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "parent_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "children_grade_level_id_grade_levels_grade_id_fk": {
+          "name": "children_grade_level_id_grade_levels_grade_id_fk",
+          "tableFrom": "children",
+          "tableTo": "grade_levels",
+          "columnsFrom": [
+            "grade_level_id"
+          ],
+          "columnsTo": [
+            "grade_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "children_user_id_users_user_id_fk": {
+          "name": "children_user_id_users_user_id_fk",
+          "tableFrom": "children",
           "tableTo": "users",
           "columnsFrom": [
-            "student_id"
+            "user_id"
           ],
           "columnsTo": [
             "user_id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -381,674 +691,25 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.education_types": {
-      "name": "education_types",
+    "public.parents": {
+      "name": "parents",
       "schema": "",
       "columns": {
-        "education_type_id": {
-          "name": "education_type_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "education_type_name": {
-          "name": "education_type_name",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.grade_levels": {
-      "name": "grade_levels",
-      "schema": "",
-      "columns": {
-        "grade_id": {
-          "name": "grade_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "grade_name": {
-          "name": "grade_name",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subjects": {
-      "name": "subjects",
-      "schema": "",
-      "columns": {
-        "subject_id": {
-          "name": "subject_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "subject_name": {
-          "name": "subject_name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutor_educations": {
-      "name": "tutor_educations",
-      "schema": "",
-      "columns": {
-        "education_id": {
-          "name": "education_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tutor_id": {
-          "name": "tutor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "major": {
-          "name": "major",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "education_institution": {
-          "name": "education_institution",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "graduation_year": {
-          "name": "graduation_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "education_type_id": {
-          "name": "education_type_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "start_date": {
-          "name": "start_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "end_date": {
-          "name": "end_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "photo": {
-          "name": "photo",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "tutor_educations_tutor_idx": {
-          "name": "tutor_educations_tutor_idx",
-          "columns": [
-            {
-              "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_educations_type_idx": {
-          "name": "tutor_educations_type_idx",
-          "columns": [
-            {
-              "expression": "education_type_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutor_id_documents": {
-      "name": "tutor_id_documents",
-      "schema": "",
-      "columns": {
-        "document_id": {
-          "name": "document_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tutor_id": {
-          "name": "tutor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "photo_front": {
-          "name": "photo_front",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "photo_back": {
-          "name": "photo_back",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "country_id": {
-          "name": "country_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "province_id": {
-          "name": "province_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_number": {
-          "name": "document_number",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "tutor_id_documents_tutor_idx": {
-          "name": "tutor_id_documents_tutor_idx",
-          "columns": [
-            {
-              "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_id_documents_country_idx": {
-          "name": "tutor_id_documents_country_idx",
-          "columns": [
-            {
-              "expression": "country_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_id_documents_province_idx": {
-          "name": "tutor_id_documents_province_idx",
-          "columns": [
-            {
-              "expression": "province_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tutor_id_documents_country_id_countries_id_fk": {
-          "name": "tutor_id_documents_country_id_countries_id_fk",
-          "tableFrom": "tutor_id_documents",
-          "tableTo": "countries",
-          "columnsFrom": [
-            "country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "tutor_id_documents_province_id_states_id_fk": {
-          "name": "tutor_id_documents_province_id_states_id_fk",
-          "tableFrom": "tutor_id_documents",
-          "tableTo": "states",
-          "columnsFrom": [
-            "province_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutor_subjects": {
-      "name": "tutor_subjects",
-      "schema": "",
-      "columns": {
-        "tutor_id": {
-          "name": "tutor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grade_id": {
-          "name": "grade_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "tutor_subjects_tutor_idx": {
-          "name": "tutor_subjects_tutor_idx",
-          "columns": [
-            {
-              "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_subjects_subject_idx": {
-          "name": "tutor_subjects_subject_idx",
-          "columns": [
-            {
-              "expression": "subject_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_subjects_grade_idx": {
-          "name": "tutor_subjects_grade_idx",
-          "columns": [
-            {
-              "expression": "grade_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "tutor_subjects_tutor_id_subject_id_grade_id_pk": {
-          "name": "tutor_subjects_tutor_id_subject_id_grade_id_pk",
-          "columns": [
-            "tutor_id",
-            "subject_id",
-            "grade_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutor_teaching_licenses": {
-      "name": "tutor_teaching_licenses",
-      "schema": "",
-      "columns": {
-        "license_id": {
-          "name": "license_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tutor_id": {
-          "name": "tutor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "photo": {
-          "name": "photo",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issue_body": {
-          "name": "issue_body",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issuing_country_id": {
-          "name": "issuing_country_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issuer_province_id": {
-          "name": "issuer_province_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "subtype": {
-          "name": "subtype",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "certification_name": {
-          "name": "certification_name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "subject_area": {
-          "name": "subject_area",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grade_level": {
-          "name": "grade_level",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issue_date": {
-          "name": "issue_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expiration_date": {
-          "name": "expiration_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "tutor_teaching_licenses_tutor_idx": {
-          "name": "tutor_teaching_licenses_tutor_idx",
-          "columns": [
-            {
-              "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_teaching_licenses_country_idx": {
-          "name": "tutor_teaching_licenses_country_idx",
-          "columns": [
-            {
-              "expression": "issuing_country_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tutor_teaching_licenses_province_idx": {
-          "name": "tutor_teaching_licenses_province_idx",
-          "columns": [
-            {
-              "expression": "issuer_province_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "tutor_teaching_licenses_issuing_country_id_countries_id_fk": {
-          "name": "tutor_teaching_licenses_issuing_country_id_countries_id_fk",
-          "tableFrom": "tutor_teaching_licenses",
-          "tableTo": "countries",
-          "columnsFrom": [
-            "issuing_country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "tutor_teaching_licenses_issuer_province_id_states_id_fk": {
-          "name": "tutor_teaching_licenses_issuer_province_id_states_id_fk",
-          "tableFrom": "tutor_teaching_licenses",
-          "tableTo": "states",
-          "columnsFrom": [
-            "issuer_province_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutor_work_experiences": {
-      "name": "tutor_work_experiences",
-      "schema": "",
-      "columns": {
-        "work_experience_id": {
-          "name": "work_experience_id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tutor_id": {
-          "name": "tutor_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "work_title": {
-          "name": "work_title",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "work_institution": {
-          "name": "work_institution",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "start_date": {
-          "name": "start_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "end_date": {
-          "name": "end_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "tutor_work_experiences_tutor_idx": {
-          "name": "tutor_work_experiences_tutor_idx",
-          "columns": [
-            {
-              "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tutors": {
-      "name": "tutors",
-      "schema": "",
-      "columns": {
-        "tutor_id": {
-          "name": "tutor_id",
+        "parent_id": {
+          "name": "parent_id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true
-        },
-        "bio": {
-          "name": "bio",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "hourly_rate": {
-          "name": "hourly_rate",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_verified": {
-          "name": "is_verified",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "tutors_tutor_id_users_user_id_fk": {
-          "name": "tutors_tutor_id_users_user_id_fk",
-          "tableFrom": "tutors",
+        "parents_parent_id_users_user_id_fk": {
+          "name": "parents_parent_id_users_user_id_fk",
+          "tableFrom": "parents",
           "tableTo": "users",
           "columnsFrom": [
-            "tutor_id"
+            "parent_id"
           ],
           "columnsTo": [
             "user_id"
@@ -1065,6 +726,19 @@
     }
   },
   "enums": {
+    "public.day_of_week_enum": {
+      "name": "day_of_week_enum",
+      "schema": "public",
+      "values": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday"
+      ]
+    },
     "public.role_enum": {
       "name": "role_enum",
       "schema": "public",
@@ -1078,7 +752,6 @@
       "schema": "public",
       "values": [
         "tutor",
-        "student",
         "parent"
       ]
     }

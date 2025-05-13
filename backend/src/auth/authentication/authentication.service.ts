@@ -21,9 +21,8 @@ import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-toke
 import { randomUUID } from 'crypto';
 import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-token.exception';
 import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
-import { AddressService } from '../../users/address/address.service';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
-import { eq } from 'drizzle-orm';
+
 
 @Injectable()
 export class AuthenticationService {
@@ -37,7 +36,6 @@ export class AuthenticationService {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly refreshTokenIdsStorage: RefreshTokenIdsStorage,
-    private readonly addressService: AddressService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -62,7 +60,7 @@ export class AuthenticationService {
           lastName,
           email,
           password: hashedPassword,
-          addressId: null,
+          address,
           photo,
           role: role as Role,
           userType,
@@ -75,23 +73,6 @@ export class AuthenticationService {
         );
       }
       const createdUser = newUserResult[0];
-
-      if (!createdUser || typeof createdUser.userId === 'undefined') {
-        throw new InternalServerErrorException(
-          'Failed to create user: User ID is undefined after insert.',
-        );
-      }
-
-      if (address) {
-        const addressId = await this.addressService.create(
-          createdUser.userId,
-          address,
-        );
-        await this.database
-          .update(userSchema.users)
-          .set({ addressId: addressId })
-          .where(eq(userSchema.users.userId, createdUser.userId));
-      }
 
       return createdUser;
     } catch (err) {

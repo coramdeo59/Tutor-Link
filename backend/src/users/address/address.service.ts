@@ -1,22 +1,21 @@
 import {
   Injectable,
   Inject,
+  ConflictException,
   InternalServerErrorException,
   NotFoundException,
-  BadRequestException,
-  ConflictException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as addressSchema from '../schema/Address-schema';
-import { UpsertAddressDto } from './dtos/upsert-address.dto';
 import { DATABASE_CONNECTION } from 'src/core/database-connection';
-import { SQL, eq, and, like } from 'drizzle-orm';
-import { SearchAddressQueryDto } from './dtos/search-address-query.dto';
-import { AddressResponseDto } from './dtos/address-response.dto';
-import { AddressDto } from './dtos/address.dto';
+import { CreateStateDto } from './dtos/create-state.dto';
+import { CreateCityDto } from './dtos/create-city.dto';
+import { eq, and } from 'drizzle-orm';
 
-// Define the address record type from the database schema
-type AddressRecord = typeof addressSchema.addresses.$inferSelect;
+// Define the record types from the database schema
+type StateRecord = typeof addressSchema.states.$inferSelect;
+type CityRecord = typeof addressSchema.cities.$inferSelect;
+// type AddressRecord = typeof addressSchema.addresses.$inferSelect;
 
 @Injectable()
 export class AddressService {
@@ -24,270 +23,219 @@ export class AddressService {
     @Inject(DATABASE_CONNECTION)
     private readonly database: NodePgDatabase<{
       addresses: typeof addressSchema.addresses;
+      states: typeof addressSchema.states;
+      cities: typeof addressSchema.cities;
     }>,
   ) {}
 
   /**
-   * Maps a database address record to the response DTO
+   * Create a new state
    */
-  private mapToAddressDto(address: AddressRecord): AddressResponseDto | null {
-    if (!address) return null;
+  async createState(createStateDto: CreateStateDto): Promise<StateRecord> {
+    const { name } = createStateDto;
 
-    return {
-      id: address.id,
-      userId: address.userId,
-      location: address.location,
-      state: address.state,
-      city: address.city,
-      phoneNumber: address.phoneNumber,
-      street: address.street,
-    };
-  }
+    try {
+      // Check if state with the same name already exists
+      const existingState = await this.database
+        .select()
+        .from(addressSchema.states)
+        .where(eq(addressSchema.states.name, name))
+        .limit(1);
 
-  /**
-   * Find an address by its ID
-   */
-  async findById(id: number): Promise<AddressResponseDto> {
-    const address = await this.database.query.addresses.findFirst({
-      where: eq(addressSchema.addresses.id, id),
-    });
-
-    if (!address) {
-      throw new NotFoundException(`Address with ID ${id} not found`);
-    }
-
-    // Cast the result to the expected type
-    const addressDto = this.mapToAddressDto(address as AddressRecord);
-    if (!addressDto) {
-      throw new InternalServerErrorException('Failed to process address data');
-    }
-    return addressDto;
-  }
-
-  /**
-   * Find an address by user ID
-   */
-  async findByUserId(userId: number): Promise<AddressResponseDto | null> {
-    const address = await this.database.query.addresses.findFirst({
-      where: eq(addressSchema.addresses.userId, userId),
-    });
-
-    // Explicitly handle potential undefined result and cast to correct type
-    return address ? this.mapToAddressDto(address as AddressRecord) : null;
-  }
-
-  /**
-   * Create a new address
-   */
-  async create(
-    userId: number,
-    addressData: AddressDto,
-  ): Promise<AddressResponseDto> {
-    const { location, state, city, phoneNumber, street } = addressData;
-
-    // Validation
-    if (!userId) {
-      throw new Error('User ID is required to create an address.');
-    }
-
-    if (!location) {
-      throw new Error('Location is required to create an address.');
-    }
-
-    const existingAddress = await this.findByUserId(userId);
-    if (existingAddress) {
-      throw new ConflictException(
-        `User with ID ${userId} already has an address.`,
-      );
-    }
-
-    // Insert new address
-    const result = await this.database
-      .insert(addressSchema.addresses)
-      .values({
-        userId, // Use userId from parameter
-        location,
-        state: state || null,
-        city: city || null,
-        phoneNumber: phoneNumber || null,
-        street: street || null,
-      })
-      .returning();
-
-    if (!result[0]) {
-      throw new Error('Failed to create address.');
-    }
-
-    // Cast the database result to AddressResponseDto
-    const addressDto = this.mapToAddressDto(result[0] as AddressRecord);
-    if (!addressDto) {
-      throw new Error('Failed to map created address to DTO.');
-    }
-    return addressDto;
-  }
-
-  /**
-   * Update an existing address
-   */
-  async update(
-    id: number,
-    addressData: Partial<UpsertAddressDto>,
-  ): Promise<AddressResponseDto> {
-    // Check if address exists
-    const existingAddress = await this.database.query.addresses.findFirst({
-      where: eq(addressSchema.addresses.id, id),
-    });
-
-    if (!existingAddress) {
-      throw new NotFoundException(`Address with ID ${id} not found`);
-    }
-
-    const { location, state, city, phoneNumber, street } = addressData;
-
-    // Only update fields that were provided
-    const updateData: Record<string, any> = {};
-
-    if (location !== undefined) updateData.location = location;
-    if (state !== undefined) updateData.state = state;
-    if (city !== undefined) updateData.city = city;
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-    if (street !== undefined) updateData.street = street;
-
-    // If no fields to update, return existing address
-    if (Object.keys(updateData).length === 0) {
-      const addressDto = this.mapToAddressDto(existingAddress as AddressRecord);
-      if (!addressDto) {
-        throw new InternalServerErrorException(
-          'Failed to process address data',
-        );
+      if (existingState.length > 0) {
+        throw new ConflictException(`State with name '${name}' already exists`);
       }
-      return addressDto;
-    }
 
-    // Update the address
-    const result = await this.database
-      .update(addressSchema.addresses)
-      .set(updateData)
-      .where(eq(addressSchema.addresses.id, id))
-      .returning();
+      // Create the state
+      const result = await this.database
+        .insert(addressSchema.states)
+        .values({ name })
+        .returning();
 
-    if (!result[0]) {
-      throw new InternalServerErrorException('Failed to update address');
-    }
+      if (!result || result.length === 0) {
+        throw new InternalServerErrorException('Failed to create state');
+      }
 
-    // Cast the database result to AddressResponseDto
-    const addressDto = this.mapToAddressDto(result[0] as AddressRecord);
-    if (!addressDto) {
-      throw new InternalServerErrorException('Failed to process address data');
-    }
-    return addressDto;
-  }
-
-  /**
-   * Delete an address by ID
-   */
-  async delete(id: number): Promise<boolean> {
-    // Check if address exists
-    const existingAddress = await this.database.query.addresses.findFirst({
-      where: eq(addressSchema.addresses.id, id),
-    });
-
-    if (!existingAddress) {
-      throw new NotFoundException(`Address with ID ${id} not found`);
-    }
-
-    // Delete the address
-    const result = await this.database
-      .delete(addressSchema.addresses)
-      .where(eq(addressSchema.addresses.id, id))
-      .returning({ id: addressSchema.addresses.id });
-
-    // Check if a row was affected by the delete operation
-    return Array.isArray(result) && result.length > 0;
-  }
-
-  /**
-   * Delete an address by user ID
-   */
-  async deleteByUserId(userId: number): Promise<boolean> {
-    const result = await this.database
-      .delete(addressSchema.addresses)
-      .where(eq(addressSchema.addresses.userId, userId))
-      .returning({ id: addressSchema.addresses.id });
-
-    // Check if a row was affected by the delete operation
-    return Array.isArray(result) && result.length > 0;
-  }
-
-  /**
-   * Upsert (create or update) an address for a user
-   */
-  async upsert(
-    userId: number,
-    addressData: UpsertAddressDto,
-  ): Promise<AddressResponseDto> {
-    const { location, state, city, phoneNumber, street } = addressData;
-
-    if (!location) {
-      throw new BadRequestException('Location is required');
-    }
-
-    // Find existing address for user
-    const existingAddress = await this.findByUserId(userId);
-
-    if (existingAddress) {
-      // Update existing address
-      return this.update(existingAddress.id, addressData);
-    } else {
-      // Create new address with AddressDto
-      const newAddressData: AddressDto = {
-        userId,
-        location,
-        state,
-        city,
-        phoneNumber,
-        street,
-      };
-      return this.create(userId, newAddressData);
+      return result[0] as StateRecord;
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      
+      console.error('Error creating state:', error);
+      throw new InternalServerErrorException(`Failed to create state: ${error.message}`);
     }
   }
 
   /**
-   * Search for addresses by criteria
+   * Create a new city with state name (creates state if it doesn't exist)
    */
-  async search(query: SearchAddressQueryDto): Promise<AddressResponseDto[]> {
-    const conditions: SQL[] = [];
+  async createCity(createCityDto: CreateCityDto): Promise<CityRecord> {
+    const { name, stateName } = createCityDto;
 
-    if (query.location) {
-      conditions.push(
-        like(addressSchema.addresses.location, `%${query.location}%`),
-      );
+    try {
+      // Check if state exists by name
+      let stateId: number;
+      let stateRecord: StateRecord | null = null;
+      
+      const existingState = await this.database
+        .select()
+        .from(addressSchema.states)
+        .where(eq(addressSchema.states.name, stateName))
+        .limit(1);
+
+      if (existingState.length > 0) {
+        // Use existing state
+        stateRecord = existingState[0] as StateRecord;
+        stateId = stateRecord.id;
+      } else {
+        // Create new state
+        console.log(`State '${stateName}' doesn't exist. Creating it...`);
+        stateRecord = await this.createState({ name: stateName });
+        stateId = stateRecord.id;
+      }
+
+      // Check if city with the same name already exists in this state
+      const existingCity = await this.database
+        .select()
+        .from(addressSchema.cities)
+        .where(
+          and(
+            eq(addressSchema.cities.name, name),
+            eq(addressSchema.cities.stateId, stateId)
+          )
+        )
+        .limit(1);
+
+      if (existingCity.length > 0) {
+        throw new ConflictException(`City with name '${name}' already exists in state '${stateName}'`);
+      }
+
+      // Create the city
+      const result = await this.database
+        .insert(addressSchema.cities)
+        .values({ name, stateId })
+        .returning();
+
+      if (!result || result.length === 0) {
+        throw new InternalServerErrorException('Failed to create city');
+      }
+
+      // Prepare enriched response including state info
+      const cityRecord = result[0] as CityRecord;
+      return {
+        ...cityRecord,
+        // Include extra info for response (these are not part of the DB record)
+        stateName
+      } as CityRecord & { stateName: string };
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        throw error;
+      }
+      
+      console.error('Error creating city:', error);
+      throw new InternalServerErrorException(`Failed to create city: ${error.message}`);
     }
+  }
 
-    if (query.state) {
-      conditions.push(like(addressSchema.addresses.state, `%${query.state}%`));
-    }
+  /**
+   * Get all states
+   */
+  async getAllStates() {
+    return this.database.select().from(addressSchema.states);
+  }
 
-    if (query.street) {
-      conditions.push(
-        like(addressSchema.addresses.street, `%${query.street}%`),
-      );
-    }
-
-    // If no conditions, return empty array
-    if (conditions.length === 0) {
-      return [];
-    }
-
-    // Query addresses
-    const result = await this.database
+  /**
+   * Get cities by state ID
+   */
+  async getCitiesByState(stateId: number) {
+    // Verify state exists
+    const stateExists = await this.database
       .select()
-      .from(addressSchema.addresses)
-      .where(and(...conditions));
+      .from(addressSchema.states)
+      .where(eq(addressSchema.states.id, stateId))
+      .limit(1);
 
-    // Map to DTOs and filter out nulls
-    return result
-      .map((record) => this.mapToAddressDto(record as AddressRecord))
-      .filter((dto): dto is AddressResponseDto => dto !== null);
+    if (stateExists.length === 0) {
+      throw new NotFoundException(`State with ID ${stateId} not found`);
+    }
+
+    return this.database
+      .select()
+      .from(addressSchema.cities)
+      .where(eq(addressSchema.cities.stateId, stateId));
+  }
+
+  /**
+   * Get all cities with their state information
+   */
+  async getAllCitiesWithStates() {
+    // Get all cities
+    const cities = await this.database
+      .select()
+      .from(addressSchema.cities);
+    
+    // Define the type for cities with state info
+    type EnrichedCity = CityRecord & { stateName: string | null };
+    
+    // Enrich cities with state information
+    const enrichedCities: EnrichedCity[] = [];
+    
+    for (const city of cities) {
+      // Get state information for each city
+      const stateResult = await this.database
+        .select()
+        .from(addressSchema.states)
+        .where(eq(addressSchema.states.id, city.stateId))
+        .limit(1);
+      
+      if (stateResult.length > 0) {
+        const state = stateResult[0] as StateRecord;
+        
+        // Add city with state information
+        enrichedCities.push({
+          ...city,
+          stateName: state.name,
+        });
+      } else {
+        // If state not found (shouldn't happen due to foreign key constraints), include city without state name
+        enrichedCities.push({
+          ...city,
+          stateName: null,
+        });
+      }
+    }
+    
+    return enrichedCities;
+  }
+
+  /**
+   * Get cities by state name
+   */
+  async getCitiesByStateName(stateName: string) {
+    // Verify state exists by name
+    const stateResult = await this.database
+      .select()
+      .from(addressSchema.states)
+      .where(eq(addressSchema.states.name, stateName))
+      .limit(1);
+
+    if (stateResult.length === 0) {
+      throw new NotFoundException(`State with name '${stateName}' not found`);
+    }
+
+    const state = stateResult[0] as StateRecord;
+
+    // Get cities for this state
+    const cities = await this.database
+      .select()
+      .from(addressSchema.cities)
+      .where(eq(addressSchema.cities.stateId, state.id));
+
+    // Enrich cities with state name
+    return cities.map(city => ({
+      ...city,
+      stateName
+    }));
   }
 }

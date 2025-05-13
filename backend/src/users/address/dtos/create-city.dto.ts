@@ -1,23 +1,17 @@
 import {
   IsNotEmpty,
-  IsOptional,
   IsString,
   Length,
 } from 'class-validator';
 
-export class AddressDto {
+export class CreateCityDto {
   @IsNotEmpty()
   @IsString()
   @Length(1, 100)
-  state: string;
+  name: string;
 
   @IsNotEmpty()
   @IsString()
   @Length(1, 100)
-  city: string;
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  phoneNumber?: string;
-}
+  stateName: string;
+} 

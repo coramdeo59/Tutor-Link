@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .results {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .note {
+      margin-top: 10px;
+      font-style: italic;
+      color: #666;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Location Manager</h1>
+  
+  <div class="card">
+    <h2>Create State</h2>
+    <div class="form-group">
+      <label for="stateName">State Name</label>
+      <input type="text" id="stateName" placeholder="Enter state name">
+    </div>
+    <button id="createStateBtn">Create State</button>
+    <div id="stateResult" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>Create City</h2>
+    <div class="form-group">
+      <label for="cityStateName">State Name</label>
+      <input type="text" id="cityStateName" placeholder="Enter state name">
+      <p class="note">If the state doesn't exist, it will be created automatically</p>
+    </div>
+    <div class="form-group">
+      <label for="cityName">City Name</label>
+      <input type="text" id="cityName" placeholder="Enter city name">
+    </div>
+    <button id="createCityBtn">Create City</button>
+    <div id="cityResult" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>View All Cities</h2>
+    <button id="viewAllCitiesBtn">View All Cities</button>
+    <div id="allCitiesResults" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>Search Cities by State Name</h2>
+    <div class="form-group">
+      <label for="searchStateName">State Name</label>
+      <input type="text" id="searchStateName" placeholder="Enter state name to search">
+    </div>
+    <button id="searchCitiesBtn">Search Cities</button>
+    <div id="searchResults" class="results"></div>
+  </div>
+  
+  <div class="card">
+    <h2>View Cities by State</h2>
+    <div class="form-group">
+      <label for="viewStateSelect">State</label>
+      <select id="viewStateSelect">
+        <option value="">Select a state</option>
+      </select>
+    </div>
+    <button id="viewCitiesBtn">View Cities</button>
+    <div id="citiesResult" class="results"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Load states on page load
+      await loadStates();
+      
+      // Event listeners
+      document.getElementById('createStateBtn').addEventListener('click', createState);
+      document.getElementById('createCityBtn').addEventListener('click', createCity);
+      document.getElementById('viewCitiesBtn').addEventListener('click', viewCities);
+      document.getElementById('searchCitiesBtn').addEventListener('click', searchCitiesByStateName);
+      document.getElementById('viewAllCitiesBtn').addEventListener('click', viewAllCities);
+      
+      // Reload states when select is focused
+      document.getElementById('viewStateSelect').addEventListener('focus', loadStates);
+    });
+    
+    async function loadStates() {
+      try {
+        const response = await fetch('/api/address/states');
+        const states = await response.json();
+        
+        // Populate state dropdowns
+        populateStateDropdown('viewStateSelect', states);
+      } catch (error) {
+        console.error('Error loading states:', error);
+      }
+    }
+    
+    function populateStateDropdown(selectId, states) {
+      const select = document.getElementById(selectId);
+      // Keep first option, remove others
+      select.innerHTML = '<option value="">Select a state</option>';
+      
+      // Add states
+      states.forEach(state => {
+        const option = document.createElement('option');
+        option.value = state.id;
+        option.textContent = state.name;
+        select.appendChild(option);
+      });
+    }
+    
+    async function createState() {
+      const stateName = document.getElementById('stateName').value.trim();
+      const resultDiv = document.getElementById('stateResult');
+      
+      if (!stateName) {
+        resultDiv.innerHTML = '<p class="error">Please enter a state name</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/address/states', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: stateName })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `<p class="success">State created successfully!</p>
+                                 <pre>${JSON.stringify(result, null, 2)}</pre>`;
+          document.getElementById('stateName').value = '';
+          await loadStates(); // Reload states
+        } else {
+          resultDiv.innerHTML = `<p class="error">Error: ${result.message}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function createCity() {
+      const stateName = document.getElementById('cityStateName').value.trim();
+      const cityName = document.getElementById('cityName').value.trim();
+      const resultDiv = document.getElementById('cityResult');
+      
+      if (!stateName) {
+        resultDiv.innerHTML = '<p class="error">Please enter a state name</p>';
+        return;
+      }
+      
+      if (!cityName) {
+        resultDiv.innerHTML = '<p class="error">Please enter a city name</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/address/cities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            name: cityName,
+            stateName: stateName
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `<p class="success">City created successfully!</p>
+                                 <pre>${JSON.stringify(result, null, 2)}</pre>`;
+          document.getElementById('cityName').value = '';
+          await loadStates(); // Reload states since a new state might have been created
+        } else {
+          resultDiv.innerHTML = `<p class="error">Error: ${result.message}</p>`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+
+    async function viewAllCities() {
+      const resultDiv = document.getElementById('allCitiesResults');
+      
+      try {
+        // Fetch all cities
+        const response = await fetch('/api/address/cities');
+        const cities = await response.json();
+        
+        if (cities.length === 0) {
+          resultDiv.innerHTML = '<p>No cities found in the database</p>';
+        } else {
+          // Create a table to display cities
+          const tableHtml = `
+            <p>Found ${cities.length} cities:</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>City Name</th>
+                  <th>State Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cities.map(city => `
+                  <tr>
+                    <td>${city.id}</td>
+                    <td>${city.name}</td>
+                    <td>${city.stateName || 'N/A'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+          
+          resultDiv.innerHTML = tableHtml;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+
+    async function searchCitiesByStateName() {
+      const stateName = document.getElementById('searchStateName').value.trim();
+      const resultDiv = document.getElementById('searchResults');
+      
+      if (!stateName) {
+        resultDiv.innerHTML = '<p class="error">Please enter a state name</p>';
+        return;
+      }
+      
+      try {
+        // Use the new endpoint to search cities by state name
+        const response = await fetch(`/api/address/cities?state=${encodeURIComponent(stateName)}`);
+        const cities = await response.json();
+        
+        if (cities.length === 0) {
+          resultDiv.innerHTML = '<p>No cities found for this state</p>';
+        } else {
+          const citiesList = cities.map(city => `<li>${city.name}</li>`).join('');
+          resultDiv.innerHTML = `
+            <p>Found ${cities.length} cities in ${stateName}:</p>
+            <ul>${citiesList}</ul>
+            <pre>${JSON.stringify(cities, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+    
+    async function viewCities() {
+      const stateId = document.getElementById('viewStateSelect').value;
+      const resultDiv = document.getElementById('citiesResult');
+      
+      if (!stateId) {
+        resultDiv.innerHTML = '<p class="error">Please select a state</p>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/address/states/${stateId}/cities`);
+        const cities = await response.json();
+        
+        if (cities.length === 0) {
+          resultDiv.innerHTML = '<p>No cities found for this state</p>';
+        } else {
+          const citiesList = cities.map(city => `<li>${city.name}</li>`).join('');
+          resultDiv.innerHTML = `
+            <p>Found ${cities.length} cities:</p>
+            <ul>${citiesList}</ul>
+            <pre>${JSON.stringify(cities, null, 2)}</pre>
+          `;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html> 

@@ -92,7 +92,6 @@ CREATE TABLE "parents" (
 	"parent_id" integer PRIMARY KEY NOT NULL
 );
 --> statement-breakpoint
-DROP TABLE "refresh_tokens" CASCADE;--> statement-breakpoint
 ALTER TABLE "addresses" ADD CONSTRAINT "addresses_user_id_users_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tutor_availability_slots" ADD CONSTRAINT "tutor_availability_slots_tutor_id_tutors_tutor_id_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."tutors"("tutor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tutors" ADD CONSTRAINT "tutors_tutor_id_users_user_id_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."users"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
