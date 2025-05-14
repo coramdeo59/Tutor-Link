@@ -1,20 +1,43 @@
-import { Controller } from '@nestjs/common';
-// import { ParentService } from './parent.service';
-// import { CreateTutorDto } from '../tutors/dto/tutor.dto';
+import { Controller, Post, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { ParentService } from './parent.service';
+import { CreateChildDto } from './dtos/create-child.dto';
+import { ChildLoginDto } from './dtos/child-login.dto'; // Import ChildLoginDto
+import { AuthType } from 'src/auth/authentication/enums/auth-type.enum';
+import { Auth } from 'src/auth/authentication/decorators/auth-decorator';
 
-@Controller('tutors')
+@Auth(AuthType.Bearer) // Requires authentication for parent operations
+@Controller('parents')
 export class ParentController {
-  constructor() {}
+  constructor(private readonly parentService: ParentService) {}
 
   /**
-   * Create a new tutor profile for an existing user.
-   * The userId is expected to be passed in the body, linking to an existing user.
+   * Add a child to a parent's profile with direct login credentials
+   * This creates a child record and links it to the parent
    */
-  // @Post()
-  // createTutor(
-  //   @Body('userId', ParseIntPipe) userId: number,
-  //   @Body() createTutorDto: CreateTutorDto,
-  // ) {
-  //   return this.tutorsService.createTutorProfile(userId, createTutorDto);
-  // }
+  @Post(':parentId/children')
+  async addChild(
+    @Param('parentId', ParseIntPipe) parentId: number,
+    @Body() createChildDto: CreateChildDto,
+  ) {
+    // Ensure the user is adding a child to their own profile
+    // if (user.userId !== parentId) {
+    //   throw new UnauthorizedException('You can only add children to your own profile');
+    // }
+
+    // Set the parentId in the DTO
+    createChildDto.parentId = parentId;
+
+    return this.parentService.addChild(createChildDto);
+  }
+
+  /**
+   * Login as a child using username and password
+   */
+  @Post('children/login')
+  @Auth(AuthType.None)
+  async loginChild(@Body() childLoginDto: ChildLoginDto) {
+    // Updated to use ChildLoginDto
+    // Validation for username and password presence is handled by class-validator in ChildLoginDto
+    return this.parentService.loginChild(childLoginDto);
+  }
 }

@@ -4,12 +4,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  ValidateNested,
+  IsInt,
+  IsPositive,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { AddressDto } from 'src/users/address/dtos/address.dto';
 import { Role } from 'src/users/enums/role-enums';
-
 
 export enum UserType {
   TUTOR = 'tutor',
@@ -36,14 +34,26 @@ export class SignUpDto {
   @IsString()
   photo?: string;
 
-  @ValidateNested()
-  @Type(() => AddressDto)
-  address: AddressDto;
-
   @IsEnum(UserType)
   userType: UserType;
 
   @IsEnum(Role)
-  @IsNotEmpty()
   role: Role;
+
+  @IsInt()
+  @IsPositive()
+  @IsNotEmpty()
+  stateId: number;
+
+  @IsInt()
+  @IsPositive()
+  @IsNotEmpty()
+  cityId: number;
+
+  @IsString()
+  @IsNotEmpty()
+  // Consider using a more specific validator like @IsPhoneNumber if available
+  // or a regex pattern for phone number validation.
+  // For simplicity, using IsString and IsNotEmpty for now.
+  phoneNumber: string;
 }

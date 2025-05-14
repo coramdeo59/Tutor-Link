@@ -3,19 +3,23 @@ import { Role } from 'src/users/enums/role-enums';
 export interface ActiveUserData {
   /**
    * The "subject" of the token. The value of this property is the user ID
-   * that granted this token
+   * or child ID that granted this token.
    */
   sub: number;
   /**
-   * The subject's (user) email.
+   * The subject's (user) email. Optional, as child accounts use username.
    */
-  email: string;
+  email?: string;
   /**
-   * The unique identifier for the refresh token
+   * The subject's (child) username. Optional, as regular users use email.
+   */
+  username?: string;
+  /**
+   * The unique identifier for the refresh token.
    */
   refreshTokenId?: string;
   /**
-   *  The subject's (user) role.
+   *  The subject's role.
    */
   role: Role;
 }

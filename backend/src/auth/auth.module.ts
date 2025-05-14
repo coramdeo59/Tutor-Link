@@ -37,6 +37,6 @@ import { AddressModule } from '../users/address/address.module'; // Corrected im
       useClass: BcryptService,
     },
   ],
-  exports: [HashingService],
+  exports: [HashingService, AuthenticationService],
 })
 export class AuthModule {}

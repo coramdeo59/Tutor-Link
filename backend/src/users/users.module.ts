@@ -8,9 +8,17 @@ import { AddressController } from './address/addres.controller';
 import { AddressService } from './address/address.service';
 import { AuthModule } from '../auth/auth.module';
 import { SubjectGradeModule } from './SubjectGrade/SubjectGrade.module';
+import { StudentModule } from './student/student.module';
+import { ParentModule } from './parent/parent.module'; // Import ParentModule
 
 @Module({
-  imports: [CoreModule, AuthModule, SubjectGradeModule],
+  imports: [
+    CoreModule,
+    AuthModule,
+    SubjectGradeModule,
+    StudentModule,
+    ParentModule, // Add ParentModule here
+  ],
   controllers: [UsersController, TutorsController, AddressController],
   providers: [UsersService, TutorsService, AddressService],
   exports: [UsersService],

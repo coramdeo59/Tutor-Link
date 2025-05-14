@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as userSchema from '../users/schema/User-schema';
 import * as addressSchema from '../users/schema/Address-schema';
+import * as tutorSchema from '../users/schema/Tutor-schema';
 import { DrizzleService } from './drizzle.service';
 import { DATABASE_CONNECTION } from './database-connection';
 import databaseConfig from '../config/databse-config';
@@ -47,7 +48,7 @@ import databaseConfig from '../config/databse-config';
           schema: {
             ...userSchema,
             ...addressSchema,
-            // ...tutorSchema, // Schemas themselves
+            ...tutorSchema, 
           },
         });
       },

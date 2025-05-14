@@ -1,11 +1,11 @@
 {
-  "id": "99386a83-cc9d-4d38-b55f-2b53afc03888",
+  "id": "5cbb8cab-b5cc-4ccb-abe7-c93402336c28",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.addresses": {
-      "name": "addresses",
+    "public.cities": {
+      "name": "cities",
       "schema": "",
       "columns": {
         "id": {
@@ -14,54 +14,30 @@
           "primaryKey": true,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "address_line_1": {
-          "name": "address_line_1",
-          "type": "varchar(255)",
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
-        "state": {
-          "name": "state",
-          "type": "varchar(100)",
+        "stateId": {
+          "name": "stateId",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "city": {
-          "name": "city",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phone_number": {
-          "name": "phone_number",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "street": {
-          "name": "street",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "addresses_user_id_users_user_id_fk": {
-          "name": "addresses_user_id_users_user_id_fk",
-          "tableFrom": "addresses",
-          "tableTo": "users",
+        "cities_stateId_states_id_fk": {
+          "name": "cities_stateId_states_id_fk",
+          "tableFrom": "cities",
+          "tableTo": "states",
           "columnsFrom": [
-            "user_id"
+            "stateId"
           ],
           "columnsTo": [
-            "user_id"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -69,6 +45,39 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.states": {
+      "name": "states",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "states_name_unique": {
+          "name": "states_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -157,8 +166,7 @@
         },
         "day_of_week": {
           "name": "day_of_week",
-          "type": "day_of_week_enum",
-          "typeSchema": "public",
+          "type": "day_of_week_enum[]",
           "primaryKey": false,
           "notNull": true
         },
@@ -195,12 +203,6 @@
           "columns": [
             {
               "expression": "tutor_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "day_of_week",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -365,15 +367,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "tutors_tutor_id_users_user_id_fk": {
-          "name": "tutors_tutor_id_users_user_id_fk",
+        "tutors_tutor_id_users_userId_fk": {
+          "name": "tutors_tutor_id_users_userId_fk",
           "tableFrom": "tutors",
           "tableTo": "users",
           "columnsFrom": [
             "tutor_id"
           ],
           "columnsTo": [
-            "user_id"
+            "userId"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -401,8 +403,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "document_pdf_url": {
-          "name": "document_pdf_url",
+        "document_Upload": {
+          "name": "document_Upload",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
@@ -413,14 +415,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "kebele_id_url": {
-          "name": "kebele_id_url",
+        "kebele_id_Upload": {
+          "name": "kebele_id_Upload",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "national_id_url": {
-          "name": "national_id_url",
+        "national_id_Upload": {
+          "name": "national_id_Upload",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
@@ -480,8 +482,8 @@
       "name": "users",
       "schema": "",
       "columns": {
-        "user_id": {
-          "name": "user_id",
+        "userId": {
+          "name": "userId",
           "type": "serial",
           "primaryKey": true,
           "notNull": true
@@ -498,14 +500,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "first_name": {
-          "name": "first_name",
+        "firstName": {
+          "name": "firstName",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
         },
-        "last_name": {
-          "name": "last_name",
+        "lastName": {
+          "name": "lastName",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": true
@@ -516,14 +518,26 @@
           "primaryKey": false,
           "notNull": false
         },
-        "address_id": {
-          "name": "address_id",
+        "stateId": {
+          "name": "stateId",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "user_type": {
-          "name": "user_type",
+        "cityId": {
+          "name": "cityId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phoneNumber": {
+          "name": "phoneNumber",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userType": {
+          "name": "userType",
           "type": "user_type_enum",
           "typeSchema": "public",
           "primaryKey": false,
@@ -554,12 +568,25 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "users_address_id_addresses_id_fk": {
-          "name": "users_address_id_addresses_id_fk",
+        "users_stateId_states_id_fk": {
+          "name": "users_stateId_states_id_fk",
           "tableFrom": "users",
-          "tableTo": "addresses",
+          "tableTo": "states",
           "columnsFrom": [
-            "address_id"
+            "stateId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "users_cityId_cities_id_fk": {
+          "name": "users_cityId_cities_id_fk",
+          "tableFrom": "users",
+          "tableTo": "cities",
+          "columnsFrom": [
+            "cityId"
           ],
           "columnsTo": [
             "id"
@@ -610,6 +637,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "username": {
+          "name": "username",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "date_of_birth": {
           "name": "date_of_birth",
           "type": "date",
@@ -622,9 +655,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
+        "password": {
+          "name": "password",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -670,23 +703,18 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
-        },
-        "children_user_id_users_user_id_fk": {
-          "name": "children_user_id_users_user_id_fk",
-          "tableFrom": "children",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "user_id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "children_username_unique": {
+          "name": "children_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -704,20 +732,65 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "parents_parent_id_users_user_id_fk": {
-          "name": "parents_parent_id_users_user_id_fk",
+        "parents_parent_id_users_userId_fk": {
+          "name": "parents_parent_id_users_userId_fk",
           "tableFrom": "parents",
           "tableTo": "users",
           "columnsFrom": [
             "parent_id"
           ],
           "columnsTo": [
-            "user_id"
+            "userId"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.refresh_tokens": {
+      "name": "refresh_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_id": {
+          "name": "token_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

@@ -23,6 +23,7 @@ import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-t
 import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
 
+// Removed unused UserSelect type alias
 
 @Injectable()
 export class AuthenticationService {
@@ -39,51 +40,56 @@ export class AuthenticationService {
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
+    if (signUpDto.role === Role.Child) {
+      throw new BadRequestException(
+        `The role "${Role.Child}" is not allowed for direct user sign-up.`,
+      );
+    }
+
     try {
-      const {
-        firstName,
-        lastName,
-        email,
-        password,
-        address,
-        photo,
-        userType,
-        role,
-      } = signUpDto;
+      const hashedPassword = await this.hashingService.hash(signUpDto.password);
 
-      const hashedPassword = await this.hashingService.hash(password);
-
-      const newUserResult = await this.database
+      const [user] = await this.database
         .insert(userSchema.users)
         .values({
-          firstName,
-          lastName,
-          email,
+          firstName: signUpDto.firstName,
+          lastName: signUpDto.lastName,
+          email: signUpDto.email,
           password: hashedPassword,
-          address,
-          photo,
-          role: role as Role,
-          userType,
+          photo: signUpDto.photo,
+          role: signUpDto.role as 'admin' | 'regular',
+          userType: signUpDto.userType,
+          stateId: signUpDto.stateId,
+          cityId: signUpDto.cityId,
+          phoneNumber: signUpDto.phoneNumber,
         })
         .returning();
 
-      if (!Array.isArray(newUserResult) || newUserResult.length === 0) {
-        throw new InternalServerErrorException(
-          'Failed to create user: No data returned after insert.',
-        );
-      }
-      const createdUser = newUserResult[0];
-
-      return createdUser;
+      return user;
     } catch (err) {
+      // Log the error for debugging
+      console.error('Registration error:', err);
+
       if (err.code === pgUniqueViolationsErrorCode) {
         throw new ConflictException('Email already exists');
       }
-      if (err.code === '23503' && err.constraint === 'users_address_id_fkey') {
-        throw new BadRequestException('Invalid address ID provided.');
+      if (err.code === '23503') { // Foreign key error
+        if (err.constraint?.includes('users_stateId_states_id_fk') || err.constraint?.includes('state_id')) {
+          throw new BadRequestException('Invalid state ID: The provided state does not exist.');
+        }
+        if (err.constraint?.includes('users_cityId_cities_id_fk') || err.constraint?.includes('city_id')) {
+          throw new BadRequestException('Invalid city ID: The provided city does not exist.');
+        }
+        // Fallback for other foreign key errors on the users table
+        throw new BadRequestException(`Invalid input: A related record does not exist (Constraint: ${err.constraint}).`);
       }
-      console.error('Signup Error:', err);
-      throw new InternalServerErrorException('User registration failed');
+
+      // In development, return the more specific error message for easier debugging
+      if (process.env.NODE_ENV !== 'production') {
+        throw new InternalServerErrorException(`Registration failed: ${err.message || 'An unknown error occurred'}`);
+      }
+      // In production, throw a generic error
+      throw new InternalServerErrorException('Registration failed due to an unexpected error.');
     }
   }
 

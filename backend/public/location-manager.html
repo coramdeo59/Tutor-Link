@@ -69,22 +69,6 @@
       font-style: italic;
       color: #666;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
   </style>
 </head>
 <body>
@@ -113,12 +97,6 @@
     </div>
     <button id="createCityBtn">Create City</button>
     <div id="cityResult" class="results"></div>
-  </div>
-  
-  <div class="card">
-    <h2>View All Cities</h2>
-    <button id="viewAllCitiesBtn">View All Cities</button>
-    <div id="allCitiesResults" class="results"></div>
   </div>
   
   <div class="card">
@@ -153,7 +131,6 @@
       document.getElementById('createCityBtn').addEventListener('click', createCity);
       document.getElementById('viewCitiesBtn').addEventListener('click', viewCities);
       document.getElementById('searchCitiesBtn').addEventListener('click', searchCitiesByStateName);
-      document.getElementById('viewAllCitiesBtn').addEventListener('click', viewAllCities);
       
       // Reload states when select is focused
       document.getElementById('viewStateSelect').addEventListener('focus', loadStates);
@@ -254,47 +231,6 @@
           await loadStates(); // Reload states since a new state might have been created
         } else {
           resultDiv.innerHTML = `<p class="error">Error: ${result.message}</p>`;
-        }
-      } catch (error) {
-        resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
-      }
-    }
-
-    async function viewAllCities() {
-      const resultDiv = document.getElementById('allCitiesResults');
-      
-      try {
-        // Fetch all cities
-        const response = await fetch('/api/address/cities');
-        const cities = await response.json();
-        
-        if (cities.length === 0) {
-          resultDiv.innerHTML = '<p>No cities found in the database</p>';
-        } else {
-          // Create a table to display cities
-          const tableHtml = `
-            <p>Found ${cities.length} cities:</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>City Name</th>
-                  <th>State Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${cities.map(city => `
-                  <tr>
-                    <td>${city.id}</td>
-                    <td>${city.name}</td>
-                    <td>${city.stateName || 'N/A'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          `;
-          
-          resultDiv.innerHTML = tableHtml;
         }
       } catch (error) {
         resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;

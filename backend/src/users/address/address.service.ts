@@ -15,14 +15,12 @@ import { eq, and } from 'drizzle-orm';
 // Define the record types from the database schema
 type StateRecord = typeof addressSchema.states.$inferSelect;
 type CityRecord = typeof addressSchema.cities.$inferSelect;
-// type AddressRecord = typeof addressSchema.addresses.$inferSelect;
 
 @Injectable()
 export class AddressService {
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly database: NodePgDatabase<{
-      addresses: typeof addressSchema.addresses;
       states: typeof addressSchema.states;
       cities: typeof addressSchema.cities;
     }>,
@@ -61,9 +59,11 @@ export class AddressService {
       if (error instanceof ConflictException) {
         throw error;
       }
-      
+
       console.error('Error creating state:', error);
-      throw new InternalServerErrorException(`Failed to create state: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to create state: ${error.message}`,
+      );
     }
   }
 
@@ -77,7 +77,7 @@ export class AddressService {
       // Check if state exists by name
       let stateId: number;
       let stateRecord: StateRecord | null = null;
-      
+
       const existingState = await this.database
         .select()
         .from(addressSchema.states)
@@ -102,13 +102,15 @@ export class AddressService {
         .where(
           and(
             eq(addressSchema.cities.name, name),
-            eq(addressSchema.cities.stateId, stateId)
-          )
+            eq(addressSchema.cities.stateId, stateId),
+          ),
         )
         .limit(1);
 
       if (existingCity.length > 0) {
-        throw new ConflictException(`City with name '${name}' already exists in state '${stateName}'`);
+        throw new ConflictException(
+          `City with name '${name}' already exists in state '${stateName}'`,
+        );
       }
 
       // Create the city
@@ -126,15 +128,17 @@ export class AddressService {
       return {
         ...cityRecord,
         // Include extra info for response (these are not part of the DB record)
-        stateName
+        stateName,
       } as CityRecord & { stateName: string };
     } catch (error) {
       if (error instanceof ConflictException) {
         throw error;
       }
-      
+
       console.error('Error creating city:', error);
-      throw new InternalServerErrorException(`Failed to create city: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Failed to create city: ${error.message}`,
+      );
     }
   }
 
@@ -171,16 +175,14 @@ export class AddressService {
    */
   async getAllCitiesWithStates() {
     // Get all cities
-    const cities = await this.database
-      .select()
-      .from(addressSchema.cities);
-    
+    const cities = await this.database.select().from(addressSchema.cities);
+
     // Define the type for cities with state info
     type EnrichedCity = CityRecord & { stateName: string | null };
-    
+
     // Enrich cities with state information
     const enrichedCities: EnrichedCity[] = [];
-    
+
     for (const city of cities) {
       // Get state information for each city
       const stateResult = await this.database
@@ -188,10 +190,10 @@ export class AddressService {
         .from(addressSchema.states)
         .where(eq(addressSchema.states.id, city.stateId))
         .limit(1);
-      
+
       if (stateResult.length > 0) {
         const state = stateResult[0] as StateRecord;
-        
+
         // Add city with state information
         enrichedCities.push({
           ...city,
@@ -205,37 +207,8 @@ export class AddressService {
         });
       }
     }
-    
+
     return enrichedCities;
   }
 
-  /**
-   * Get cities by state name
-   */
-  async getCitiesByStateName(stateName: string) {
-    // Verify state exists by name
-    const stateResult = await this.database
-      .select()
-      .from(addressSchema.states)
-      .where(eq(addressSchema.states.name, stateName))
-      .limit(1);
-
-    if (stateResult.length === 0) {
-      throw new NotFoundException(`State with name '${stateName}' not found`);
-    }
-
-    const state = stateResult[0] as StateRecord;
-
-    // Get cities for this state
-    const cities = await this.database
-      .select()
-      .from(addressSchema.cities)
-      .where(eq(addressSchema.cities.stateId, state.id));
-
-    // Enrich cities with state name
-    return cities.map(city => ({
-      ...city,
-      stateName
-    }));
-  }
 }
