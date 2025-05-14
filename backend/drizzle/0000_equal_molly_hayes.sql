@@ -35,17 +35,12 @@ CREATE TABLE "tutor_availability_slots" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "tutor_subjects" (
-	"tutor_id" integer NOT NULL,
-	"subject_id" integer NOT NULL,
-	"grade_id" integer NOT NULL,
-	CONSTRAINT "tutor_subjects_tutor_id_subject_id_grade_id_pk" PRIMARY KEY("tutor_id","subject_id","grade_id")
-);
---> statement-breakpoint
 CREATE TABLE "tutors" (
 	"tutor_id" integer PRIMARY KEY NOT NULL,
 	"bio" text,
 	"is_verified" boolean DEFAULT false NOT NULL,
+	"subject_id" integer NOT NULL,
+	"grade_id" integer NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -115,7 +110,4 @@ ALTER TABLE "users" ADD CONSTRAINT "users_cityId_cities_id_fk" FOREIGN KEY ("cit
 ALTER TABLE "children" ADD CONSTRAINT "children_parent_id_parents_parent_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."parents"("parent_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "children" ADD CONSTRAINT "children_grade_level_id_grade_levels_grade_id_fk" FOREIGN KEY ("grade_level_id") REFERENCES "public"."grade_levels"("grade_id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "parents" ADD CONSTRAINT "parents_parent_id_users_userId_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."users"("userId") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "tutor_day_slot_idx" ON "tutor_availability_slots" USING btree ("tutor_id","start_time");--> statement-breakpoint
-CREATE INDEX "tutor_subjects_tutor_idx" ON "tutor_subjects" USING btree ("tutor_id");--> statement-breakpoint
-CREATE INDEX "tutor_subjects_subject_idx" ON "tutor_subjects" USING btree ("subject_id");--> statement-breakpoint
-CREATE INDEX "tutor_subjects_grade_idx" ON "tutor_subjects" USING btree ("grade_id");
+CREATE INDEX "tutor_day_slot_idx" ON "tutor_availability_slots" USING btree ("tutor_id","start_time");

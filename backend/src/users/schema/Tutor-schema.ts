@@ -2,7 +2,6 @@ import {
   pgTable,
   integer,
   timestamp,
-  primaryKey,
   index,
   text,
   boolean,
@@ -13,7 +12,6 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './User-schema';
-import { subjects, gradeLevels } from './SubjectGrade-schema';
 
 export const tutors = pgTable('tutors', {
   tutorId: integer('tutor_id')
@@ -21,6 +19,8 @@ export const tutors = pgTable('tutors', {
     .references(() => users.userId, { onDelete: 'cascade' }),
   bio: text('bio'),
   isVerified: boolean('is_verified').default(false).notNull(),
+  subjectId: integer('subject_id').notNull(),
+  gradeId: integer('grade_id').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -72,21 +72,6 @@ export const tutorAvailabilitySlots = pgTable(
   }),
 );
 
-export const tutorSubjects = pgTable(
-  'tutor_subjects',
-  {
-    tutorId: integer('tutor_id').notNull(),
-    subjectId: integer('subject_id').notNull(),
-    gradeId: integer('grade_id').notNull(),
-  },
-  (table) => ({
-    pk: primaryKey(table.tutorId, table.subjectId, table.gradeId),
-    tutorIdx: index('tutor_subjects_tutor_idx').on(table.tutorId),
-    subjectIdx: index('tutor_subjects_subject_idx').on(table.subjectId),
-    gradeIdx: index('tutor_subjects_grade_idx').on(table.gradeId),
-  }),
-);
-
 // Relations
 
 export const tutorRelations = relations(tutors, ({ one, many }) => ({
@@ -98,8 +83,6 @@ export const tutorRelations = relations(tutors, ({ one, many }) => ({
     fields: [tutors.tutorId],
     references: [verificationDetails.tutorId],
   }),
-  tutorSubjects: many(tutorSubjects),
-  availabilitySlots: many(tutorAvailabilitySlots), // Relation to availability slots
 }));
 
 export const verificationDetailsRelations = relations(
@@ -122,20 +105,3 @@ export const tutorAvailabilitySlotsRelations = relations(
     }),
   }),
 );
-
-export const tutorSubjectRelations = relations(tutorSubjects, ({ one }) => ({
-  tutor: one(tutors, {
-    fields: [tutorSubjects.tutorId],
-    references: [tutors.tutorId],
-  }),
-  subject: one(subjects, {
-    // Ensure this 'subjects' refers to the one from ../schema
-    fields: [tutorSubjects.subjectId],
-    references: [subjects.subjectId],
-  }),
-  gradeLevel: one(gradeLevels, {
-    // Ensure this 'gradeLevels' refers to the one from ../schema
-    fields: [tutorSubjects.gradeId],
-    references: [gradeLevels.gradeId],
-  }),
-}));

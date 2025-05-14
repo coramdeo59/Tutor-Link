@@ -27,5 +27,3 @@ export const cityRelations = relations(cities, ({ one, many }) => ({
   }),
   users: many(users),
 }));
-
-

@@ -210,5 +210,4 @@ export class AddressService {
 
     return enrichedCities;
   }
-
 }

@@ -1,6 +1,6 @@
 {
-  "id": "30bc4674-1705-4113-8eb7-441daccdc35d",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "37339c6b-1d66-477b-b207-40b253074129",
+  "prevId": "30bc4674-1705-4113-8eb7-441daccdc35d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -264,18 +264,6 @@
           "notNull": true,
           "default": false
         },
-        "subject_id": {
-          "name": "subject_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grade_id": {
-          "name": "grade_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -400,6 +388,100 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tutor_subjects": {
+      "name": "tutor_subjects",
+      "schema": "",
+      "columns": {
+        "tutor_id": {
+          "name": "tutor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_id": {
+          "name": "subject_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "grade_id": {
+          "name": "grade_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tutor_subjects_tutor_id_tutors_tutor_id_fk": {
+          "name": "tutor_subjects_tutor_id_tutors_tutor_id_fk",
+          "tableFrom": "tutor_subjects",
+          "tableTo": "tutors",
+          "columnsFrom": [
+            "tutor_id"
+          ],
+          "columnsTo": [
+            "tutor_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tutor_subjects_subject_id_subjects_subject_id_fk": {
+          "name": "tutor_subjects_subject_id_subjects_subject_id_fk",
+          "tableFrom": "tutor_subjects",
+          "tableTo": "subjects",
+          "columnsFrom": [
+            "subject_id"
+          ],
+          "columnsTo": [
+            "subject_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tutor_subjects_grade_id_grade_levels_grade_id_fk": {
+          "name": "tutor_subjects_grade_id_grade_levels_grade_id_fk",
+          "tableFrom": "tutor_subjects",
+          "tableTo": "grade_levels",
+          "columnsFrom": [
+            "grade_id"
+          ],
+          "columnsTo": [
+            "grade_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tutor_subjects_tutor_id_subject_id_grade_id_pk": {
+          "name": "tutor_subjects_tutor_id_subject_id_grade_id_pk",
+          "columns": [
+            "tutor_id",
+            "subject_id",
+            "grade_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

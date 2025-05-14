@@ -9,18 +9,17 @@ import {
   HttpStatus,
   ForbiddenException, // Uncommented
 } from '@nestjs/common';
-import {  TutorAvailabilitySlot, TutorsService } from './tutors.service';
+import { TutorAvailabilitySlot, TutorsService } from './tutors.service';
 import { CreateTutorProfileDto } from './dto/create-tutor-profile.dto';
 import { CreateVerificationDetailsDto } from './dto/create-verification-details.dto'; // Added import
 import { ActiveUser } from '../../auth/Decorators/active-user.decorator'; // Uncommented
 import { ActiveUserData } from '../../auth/interfaces/active-user-data.interface'; // Uncommented
 // import { Roles } from '../../auth/authorization/decorators/roles.decorator'; // For role-based access
-import { Role } from '../enums/role-enums'; // Assuming Role enum is here
-// import { Auth } from '../../auth/authentication/decorators/auth.decorator'; // Combined auth guard
-// import { AuthType } from '../../auth/authentication/enums/auth-type.enum'; // For specifying auth type
+import { Auth } from '../../auth/authentication/decorators/auth-decorator'; // Combined auth guard
+import { AuthType } from '../../auth/authentication/enums/auth-type.enum'; // For specifying auth type
 
-
-@Controller('users/tutor-profile') // MODIFIED: Added :userId here
+@Auth(AuthType.Bearer)
+@Controller('users/tutor-profile')
 export class TutorsController {
   constructor(private readonly tutorsService: TutorsService) {}
 
@@ -30,16 +29,18 @@ export class TutorsController {
    */
   @Post() // Now correctly mounted at 'users/:userId/tutor-profile'
   @HttpCode(HttpStatus.CREATED)
-  // @Auth(AuthType.Bearer) // Example: Protect this route
   async createTutorProfile(
     @ActiveUser() activeUser: ActiveUserData,
     @Body() createTutorProfileDto: CreateTutorProfileDto,
   ) {
     // Only the user themselves or an admin can create their profile.
-    if (activeUser.role !== Role.Admin && activeUser.sub !== activeUser.sub) {
-      throw new ForbiddenException('You are not authorized to create this tutor profile.');
+    if (!activeUser || !activeUser.sub) {
+      throw new ForbiddenException('User authentication required');
     }
-    return this.tutorsService.createTutorProfile(activeUser.sub, createTutorProfileDto);
+    return this.tutorsService.createTutorProfile(
+      activeUser.sub,
+      createTutorProfileDto,
+    );
   }
 
   /**
@@ -69,7 +70,10 @@ export class TutorsController {
     @Body() createVerificationDetailsDto: CreateVerificationDetailsDto,
   ) {
     // Use activeUser.sub as tutorId
-    return this.tutorsService.createVerificationDetails(activeUser.sub, createVerificationDetailsDto);
+    return this.tutorsService.createVerificationDetails(
+      activeUser.sub,
+      createVerificationDetailsDto,
+    );
   }
 
   /**
@@ -97,9 +101,7 @@ export class TutorsController {
   }
 
   @Get('availability-slots')
-  async getAvailabilitySlots(
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
+  async getAvailabilitySlots(@ActiveUser() activeUser: ActiveUserData) {
     return this.tutorsService.getAvailabilitySlots(activeUser.sub);
   }
 
@@ -109,7 +111,11 @@ export class TutorsController {
     @Param('slotId', ParseIntPipe) slotId: number,
     @Body() dto: TutorAvailabilitySlot,
   ) {
-    return this.tutorsService.updateAvailabilitySlot(activeUser.sub, slotId, dto);
+    return this.tutorsService.updateAvailabilitySlot(
+      activeUser.sub,
+      slotId,
+      dto,
+    );
   }
 
   @Post('availability-slots/:slotId/delete')

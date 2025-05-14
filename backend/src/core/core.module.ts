@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import * as userSchema from '../users/schema/User-schema';
 import * as addressSchema from '../users/schema/Address-schema';
 import * as tutorSchema from '../users/schema/Tutor-schema';
+import * as subjectGradeSchema from '../users/schema/SubjectGrade-schema';
 import { DrizzleService } from './drizzle.service';
 import { DATABASE_CONNECTION } from './database-connection';
 import databaseConfig from '../config/databse-config';
@@ -48,7 +49,8 @@ import databaseConfig from '../config/databse-config';
           schema: {
             ...userSchema,
             ...addressSchema,
-            ...tutorSchema, 
+            ...tutorSchema,
+            ...subjectGradeSchema,
           },
         });
       },

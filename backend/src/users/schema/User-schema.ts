@@ -34,11 +34,11 @@ export const users = pgTable('users', {
 });
 
 export const userRelations = relations(users, ({ one }) => ({
-  state: one(states, { 
+  state: one(states, {
     fields: [users.stateId],
     references: [states.id],
   }),
-  city: one(cities, { 
+  city: one(cities, {
     fields: [users.cityId],
     references: [cities.id],
   }),

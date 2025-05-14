@@ -73,23 +73,40 @@ export class AuthenticationService {
       if (err.code === pgUniqueViolationsErrorCode) {
         throw new ConflictException('Email already exists');
       }
-      if (err.code === '23503') { // Foreign key error
-        if (err.constraint?.includes('users_stateId_states_id_fk') || err.constraint?.includes('state_id')) {
-          throw new BadRequestException('Invalid state ID: The provided state does not exist.');
+      if (err.code === '23503') {
+        // Foreign key error
+        if (
+          err.constraint?.includes('users_stateId_states_id_fk') ||
+          err.constraint?.includes('state_id')
+        ) {
+          throw new BadRequestException(
+            'Invalid state ID: The provided state does not exist.',
+          );
         }
-        if (err.constraint?.includes('users_cityId_cities_id_fk') || err.constraint?.includes('city_id')) {
-          throw new BadRequestException('Invalid city ID: The provided city does not exist.');
+        if (
+          err.constraint?.includes('users_cityId_cities_id_fk') ||
+          err.constraint?.includes('city_id')
+        ) {
+          throw new BadRequestException(
+            'Invalid city ID: The provided city does not exist.',
+          );
         }
         // Fallback for other foreign key errors on the users table
-        throw new BadRequestException(`Invalid input: A related record does not exist (Constraint: ${err.constraint}).`);
+        throw new BadRequestException(
+          `Invalid input: A related record does not exist (Constraint: ${err.constraint}).`,
+        );
       }
 
       // In development, return the more specific error message for easier debugging
       if (process.env.NODE_ENV !== 'production') {
-        throw new InternalServerErrorException(`Registration failed: ${err.message || 'An unknown error occurred'}`);
+        throw new InternalServerErrorException(
+          `Registration failed: ${err.message || 'An unknown error occurred'}`,
+        );
       }
       // In production, throw a generic error
-      throw new InternalServerErrorException('Registration failed due to an unexpected error.');
+      throw new InternalServerErrorException(
+        'Registration failed due to an unexpected error.',
+      );
     }
   }
 

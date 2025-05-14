@@ -1,8 +1,16 @@
-import { Injectable, Inject, NotFoundException, InternalServerErrorException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  InternalServerErrorException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DATABASE_CONNECTION } from '../../core/database-connection';
 import * as tutorSchema from '../schema/Tutor-schema';
 import * as userSchema from '../schema/User-schema';
+import * as subjectGradeSchema from '../schema/SubjectGrade-schema';
 import { CreateTutorProfileDto } from './dto/create-tutor-profile.dto';
 import { CreateVerificationDetailsDto } from './dto/create-verification-details.dto'; // Import DTO
 import { eq } from 'drizzle-orm';
@@ -10,8 +18,10 @@ import { eq } from 'drizzle-orm';
 // Infer types for Drizzle ORM
 export type Tutor = typeof tutorSchema.tutors.$inferSelect;
 export type NewTutor = typeof tutorSchema.tutors.$inferInsert;
-export type VerificationDetails = typeof tutorSchema.verificationDetails.$inferSelect;
-export type TutorAvailabilitySlot = typeof tutorSchema.tutorAvailabilitySlots.$inferSelect;
+export type VerificationDetails =
+  typeof tutorSchema.verificationDetails.$inferSelect;
+export type TutorAvailabilitySlot =
+  typeof tutorSchema.tutorAvailabilitySlots.$inferSelect;
 
 @Injectable()
 export class TutorsService {
@@ -21,7 +31,9 @@ export class TutorsService {
       users: typeof userSchema.users;
       tutors: typeof tutorSchema.tutors;
       verificationDetails: typeof tutorSchema.verificationDetails;
-    tutorAvailabilitySlots: typeof tutorSchema.tutorAvailabilitySlots;  // Ensure this is present
+      tutorAvailabilitySlots: typeof tutorSchema.tutorAvailabilitySlots;
+      subjects: typeof subjectGradeSchema.subjects;
+      gradeLevels: typeof subjectGradeSchema.gradeLevels;
     }>,
   ) {}
 
@@ -47,26 +59,53 @@ export class TutorsService {
       where: eq(tutorSchema.tutors.tutorId, userId),
     });
     if (existingTutorProfile) {
-      throw new ConflictException(`Tutor profile already exists for user ID ${userId}.`);
+      throw new ConflictException(
+        `Tutor profile already exists for user ID ${userId}.`,
+      );
     }
 
-    // 3. Create the tutor profile
+    // 3. Validate that the subject exists
+    const subjectExists = await this.database.query.subjects.findFirst({
+      where: eq(subjectGradeSchema.subjects.subjectId, createTutorProfileDto.subjectId),
+    });
+    
+    if (!subjectExists) {
+      throw new BadRequestException(`Subject with ID ${createTutorProfileDto.subjectId} not found.`);
+    }
+
+    // 4. Validate that the grade level exists
+    const gradeLevelExists = await this.database.query.gradeLevels.findFirst({
+      where: eq(subjectGradeSchema.gradeLevels.gradeId, createTutorProfileDto.gradeId),
+    });
+    
+    if (!gradeLevelExists) {
+      throw new BadRequestException(`Grade level with ID ${createTutorProfileDto.gradeId} not found.`);
+    }
+
+    // 5. Create the tutor profile
     try {
       const [newTutor] = await this.database
         .insert(tutorSchema.tutors)
         .values({
           tutorId: userId, // Link to the existing user
           bio: createTutorProfileDto.bio,
+          subjectId: createTutorProfileDto.subjectId,
+          gradeId: createTutorProfileDto.gradeId,
           // isVerified defaults to false in the schema
         })
         .returning();
 
       if (!newTutor) {
-        throw new InternalServerErrorException('Failed to create tutor profile after insert.');
+        throw new InternalServerErrorException(
+          'Failed to create tutor profile after insert.',
+        );
       }
       return newTutor;
     } catch (error) {
-      console.error(`Error creating tutor profile for user ID ${userId}:`, error);
+      console.error(
+        `Error creating tutor profile for user ID ${userId}:`,
+        error,
+      );
       throw new InternalServerErrorException('Could not create tutor profile.');
     }
   }
@@ -80,7 +119,9 @@ export class TutorsService {
     });
 
     if (!tutorProfile) {
-      throw new NotFoundException(`Tutor profile not found for user ID ${userId}.`);
+      throw new NotFoundException(
+        `Tutor profile not found for user ID ${userId}.`,
+      );
     }
     return tutorProfile;
   }
@@ -108,9 +149,10 @@ export class TutorsService {
     }
 
     // 2. Check if verification details already exist for this tutor
-    const existingDetails = await this.database.query.verificationDetails.findFirst({
-      where: eq(tutorSchema.verificationDetails.tutorId, tutorId),
-    });
+    const existingDetails =
+      await this.database.query.verificationDetails.findFirst({
+        where: eq(tutorSchema.verificationDetails.tutorId, tutorId),
+      });
     if (existingDetails) {
       throw new ConflictException(
         `Verification details already exist for tutor ID ${tutorId}.`,
@@ -124,7 +166,7 @@ export class TutorsService {
         .values({
           tutorId: tutorId,
           documentUpload: createVerificationDetailsDto.documentUpload, // Corrected
-          cvUpload: createVerificationDetailsDto.cvUpload,             // Corrected
+          cvUpload: createVerificationDetailsDto.cvUpload, // Corrected
           kebeleIdUpload: createVerificationDetailsDto.kebeleIdUpload, // Corrected
           nationalIdUpload: createVerificationDetailsDto.nationalIdUpload, // Corrected
           fanNumber: createVerificationDetailsDto.fanNumber,
@@ -139,8 +181,13 @@ export class TutorsService {
       }
       return newDetails;
     } catch (error) {
-      console.error(`Error creating verification details for tutor ID ${tutorId}:`, error);
-      throw new InternalServerErrorException('Could not create verification details.');
+      console.error(
+        `Error creating verification details for tutor ID ${tutorId}:`,
+        error,
+      );
+      throw new InternalServerErrorException(
+        'Could not create verification details.',
+      );
     }
   }
 
@@ -173,16 +220,18 @@ export class TutorsService {
     const tutorProfile = await this.database.query.tutors.findFirst({
       where: eq(tutorSchema.tutors.tutorId, tutorId),
     });
-    
+
     if (!tutorProfile) {
       throw new NotFoundException(
-        `Tutor profile not found for user ID ${tutorId}. Create a tutor profile first.`
+        `Tutor profile not found for user ID ${tutorId}. Create a tutor profile first.`,
       );
     }
-    
+
     // Convert dayOfWeek to array if it's not already
-    const daysOfWeek = Array.isArray(dto.dayOfWeek) ? dto.dayOfWeek : [dto.dayOfWeek];
-    
+    const daysOfWeek = Array.isArray(dto.dayOfWeek)
+      ? dto.dayOfWeek
+      : [dto.dayOfWeek];
+
     const [slot] = await this.database
       .insert(tutorSchema.tutorAvailabilitySlots)
       .values({
@@ -192,7 +241,7 @@ export class TutorsService {
         endTime: dto.endTime,
       })
       .returning();
-    
+
     if (!slot) throw new InternalServerErrorException('Failed to create slot');
     return slot;
   }
@@ -200,7 +249,9 @@ export class TutorsService {
   /**
    * Get all availability slots for a tutor.
    */
-  async getAvailabilitySlots(tutorId: number): Promise<TutorAvailabilitySlot[]> {
+  async getAvailabilitySlots(
+    tutorId: number,
+  ): Promise<TutorAvailabilitySlot[]> {
     return this.database.query.tutorAvailabilitySlots.findMany({
       where: eq(tutorSchema.tutorAvailabilitySlots.tutorId, tutorId),
     });
@@ -221,15 +272,17 @@ export class TutorsService {
     if (!slot || slot.tutorId !== tutorId) {
       throw new NotFoundException('Slot not found or not owned by tutor');
     }
-    
+
     // Prepare update data
-    const updateData: Partial<typeof tutorSchema.tutorAvailabilitySlots.$inferInsert> = {};
-    
+    const updateData: Partial<
+      typeof tutorSchema.tutorAvailabilitySlots.$inferInsert
+    > = {};
+
     if (dto.startTime) updateData.startTime = dto.startTime;
     if (dto.endTime) updateData.endTime = dto.endTime;
     if (dto.dayOfWeek) {
-      updateData.dayOfWeek = Array.isArray(dto.dayOfWeek) 
-        ? dto.dayOfWeek 
+      updateData.dayOfWeek = Array.isArray(dto.dayOfWeek)
+        ? dto.dayOfWeek
         : [dto.dayOfWeek];
     }
 
@@ -238,8 +291,9 @@ export class TutorsService {
       .set(updateData)
       .where(eq(tutorSchema.tutorAvailabilitySlots.id, slotId))
       .returning();
-      
-    if (!updated) throw new InternalServerErrorException('Failed to update slot');
+
+    if (!updated)
+      throw new InternalServerErrorException('Failed to update slot');
     return updated;
   }
 
