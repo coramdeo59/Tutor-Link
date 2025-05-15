@@ -80,6 +80,28 @@ export class ChildController {
   }
 
   /**
+   * Get the complete dashboard for the authenticated child
+   * Includes profile, upcoming sessions, learning hours, progress, and achievements
+   */
+  @Get('dashboard')
+  @Auth(AuthType.Bearer)
+  async getChildDashboard(@ActiveUser() activeUser: ActiveUserData) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a child account
+    if (activeUser.role !== Role.Child) {
+      throw new UnauthorizedException(
+        'Only child accounts can access this endpoint',
+      );
+    }
+
+    const childId = Number(activeUser.sub);
+    return this.childService.getChildDashboard(childId);
+  }
+
+  /**
    * Get a specific child's profile (for parent access)
    */
   @Get(':childId/profile')
@@ -102,5 +124,210 @@ export class ChildController {
     // In a real application, you would verify that this child belongs to this parent
     // For now, we'll just return the child profile
     return this.childService.getChildProfile(childId);
+  }
+
+  /**
+   * Get the complete dashboard for a specific child (for parent access)
+   * Includes profile, upcoming sessions, learning hours, progress, and achievements
+   */
+  @Get(':childId/dashboard')
+  @Auth(AuthType.Bearer)
+  async getSpecificChildDashboard(
+    @Param('childId', ParseIntPipe) childId: number,
+    @ActiveUser() activeUser: ActiveUserData,
+  ) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a parent
+    if (activeUser.role !== Role.Parent) {
+      throw new UnauthorizedException(
+        'Only parent accounts can access this endpoint',
+      );
+    }
+
+    // In a real application, you would verify that this child belongs to this parent
+    return this.childService.getChildDashboard(childId);
+  }
+
+  /**
+   * Get upcoming tutoring sessions for the authenticated child
+   */
+  @Get('sessions/upcoming')
+  @Auth(AuthType.Bearer)
+  async getUpcomingSessions(@ActiveUser() activeUser: ActiveUserData) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a child account
+    if (activeUser.role !== Role.Child) {
+      throw new UnauthorizedException(
+        'Only child accounts can access this endpoint',
+      );
+    }
+
+    const childId = Number(activeUser.sub);
+    return this.childService.getUpcomingSessions(childId);
+  }
+
+  /**
+   * Get learning hours summary for the authenticated child
+   */
+  @Get('learning/hours')
+  @Auth(AuthType.Bearer)
+  async getLearningHours(@ActiveUser() activeUser: ActiveUserData) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a child account
+    if (activeUser.role !== Role.Child) {
+      throw new UnauthorizedException(
+        'Only child accounts can access this endpoint',
+      );
+    }
+
+    const childId = Number(activeUser.sub);
+    return this.childService.getWeeklyLearningHoursSummary(childId);
+  }
+
+  /**
+   * Get learning progress for the authenticated child
+   */
+  @Get('learning/progress')
+  @Auth(AuthType.Bearer)
+  async getLearningProgress(@ActiveUser() activeUser: ActiveUserData) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a child account
+    if (activeUser.role !== Role.Child) {
+      throw new UnauthorizedException(
+        'Only child accounts can access this endpoint',
+      );
+    }
+
+    const childId = Number(activeUser.sub);
+    return this.childService.getChildLearningProgress(childId);
+  }
+
+  /**
+   * Get achievements for the authenticated child
+   */
+  @Get('achievements')
+  @Auth(AuthType.Bearer)
+  async getAchievements(@ActiveUser() activeUser: ActiveUserData) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a child account
+    if (activeUser.role !== Role.Child) {
+      throw new UnauthorizedException(
+        'Only child accounts can access this endpoint',
+      );
+    }
+
+    const childId = Number(activeUser.sub);
+    return this.childService.getChildAchievements(childId);
+  }
+
+  /**
+   * Get upcoming sessions for a specific child (for parent access)
+   */
+  @Get(':childId/sessions/upcoming')
+  @Auth(AuthType.Bearer)
+  async getChildUpcomingSessions(
+    @Param('childId', ParseIntPipe) childId: number,
+    @ActiveUser() activeUser: ActiveUserData,
+  ) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a parent
+    if (activeUser.role !== Role.Parent) {
+      throw new UnauthorizedException(
+        'Only parent accounts can access this endpoint',
+      );
+    }
+
+    // In a real application, you would verify that this child belongs to this parent
+    return this.childService.getUpcomingSessions(childId);
+  }
+
+  /**
+   * Get learning hours for a specific child (for parent access)
+   */
+  @Get(':childId/learning/hours')
+  @Auth(AuthType.Bearer)
+  async getChildLearningHours(
+    @Param('childId', ParseIntPipe) childId: number,
+    @ActiveUser() activeUser: ActiveUserData,
+  ) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a parent
+    if (activeUser.role !== Role.Parent) {
+      throw new UnauthorizedException(
+        'Only parent accounts can access this endpoint',
+      );
+    }
+
+    // In a real application, you would verify that this child belongs to this parent
+    return this.childService.getWeeklyLearningHoursSummary(childId);
+  }
+
+  /**
+   * Get learning progress for a specific child (for parent access)
+   */
+  @Get(':childId/learning/progress')
+  @Auth(AuthType.Bearer)
+  async getChildLearningProgress(
+    @Param('childId', ParseIntPipe) childId: number,
+    @ActiveUser() activeUser: ActiveUserData,
+  ) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a parent
+    if (activeUser.role !== Role.Parent) {
+      throw new UnauthorizedException(
+        'Only parent accounts can access this endpoint',
+      );
+    }
+
+    // In a real application, you would verify that this child belongs to this parent
+    return this.childService.getChildLearningProgress(childId);
+  }
+
+  /**
+   * Get achievements for a specific child (for parent access)
+   */
+  @Get(':childId/achievements')
+  @Auth(AuthType.Bearer)
+  async getChildAchievements(
+    @Param('childId', ParseIntPipe) childId: number,
+    @ActiveUser() activeUser: ActiveUserData,
+  ) {
+    if (!activeUser || !activeUser.sub) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
+    // Ensure user is a parent
+    if (activeUser.role !== Role.Parent) {
+      throw new UnauthorizedException(
+        'Only parent accounts can access this endpoint',
+      );
+    }
+
+    // In a real application, you would verify that this child belongs to this parent
+    return this.childService.getChildAchievements(childId);
   }
 }
