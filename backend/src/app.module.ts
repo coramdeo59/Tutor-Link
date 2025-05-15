@@ -5,6 +5,8 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
+import { UploadModule } from './upload/upload.module';
+import { TutoringModule } from './tutoring/tutoring.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { CoreModule } from './core/core.module';
     AuthModule,
     UsersModule,
     CoreModule,
+    UploadModule,
+    TutoringModule,
   ],
   controllers: [AppController],
   providers: [AppService],

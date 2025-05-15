@@ -9,9 +9,9 @@ import {
 } from 'class-validator';
 
 export class CreateChildDto {
-  @IsNotEmpty()
+  @IsOptional() // Make optional for validation
   @IsInt()
-  parentId: number;
+  parentId!: number;
 
   @IsNotEmpty()
   @IsString()
@@ -25,7 +25,7 @@ export class CreateChildDto {
 
   @IsNotEmpty()
   @IsString()
-  @IsAlphanumeric() // Ensure username is alphanumeric
+  @IsAlphanumeric()
   @Length(3, 30) // Define appropriate length for username
   username: string; // Added username
 

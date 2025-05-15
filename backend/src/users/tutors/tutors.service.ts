@@ -66,20 +66,30 @@ export class TutorsService {
 
     // 3. Validate that the subject exists
     const subjectExists = await this.database.query.subjects.findFirst({
-      where: eq(subjectGradeSchema.subjects.subjectId, createTutorProfileDto.subjectId),
+      where: eq(
+        subjectGradeSchema.subjects.subjectId,
+        createTutorProfileDto.subjectId,
+      ),
     });
-    
+
     if (!subjectExists) {
-      throw new BadRequestException(`Subject with ID ${createTutorProfileDto.subjectId} not found.`);
+      throw new BadRequestException(
+        `Subject with ID ${createTutorProfileDto.subjectId} not found.`,
+      );
     }
 
     // 4. Validate that the grade level exists
     const gradeLevelExists = await this.database.query.gradeLevels.findFirst({
-      where: eq(subjectGradeSchema.gradeLevels.gradeId, createTutorProfileDto.gradeId),
+      where: eq(
+        subjectGradeSchema.gradeLevels.gradeId,
+        createTutorProfileDto.gradeId,
+      ),
     });
-    
+
     if (!gradeLevelExists) {
-      throw new BadRequestException(`Grade level with ID ${createTutorProfileDto.gradeId} not found.`);
+      throw new BadRequestException(
+        `Grade level with ID ${createTutorProfileDto.gradeId} not found.`,
+      );
     }
 
     // 5. Create the tutor profile

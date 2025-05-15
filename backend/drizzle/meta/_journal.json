@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1747223667284,
-      "tag": "0000_equal_molly_hayes",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1747226503874,
-      "tag": "0001_fine_valkyrie",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747227452413,
-      "tag": "0002_cultured_mongu",
+      "when": 1747289125902,
+      "tag": "0000_round_lizard",
       "breakpoints": true
     }
   ]

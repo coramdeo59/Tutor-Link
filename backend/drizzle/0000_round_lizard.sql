@@ -1,6 +1,72 @@
 CREATE TYPE "public"."day_of_week_enum" AS ENUM('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');--> statement-breakpoint
 CREATE TYPE "public"."role_enum" AS ENUM('admin', 'regular');--> statement-breakpoint
 CREATE TYPE "public"."user_type_enum" AS ENUM('tutor', 'parent');--> statement-breakpoint
+CREATE TABLE "achievements" (
+	"achievement_id" serial PRIMARY KEY NOT NULL,
+	"child_id" integer NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"description" text,
+	"earned_date" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "dashboard_settings" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"child_id" integer NOT NULL,
+	"preferred_subject_ids" jsonb,
+	"widget_preferences" jsonb,
+	"display_preferences" jsonb,
+	"pinned_items" jsonb,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "dashboard_settings_child_id_unique" UNIQUE("child_id")
+);
+--> statement-breakpoint
+CREATE TABLE "learning_hours" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"child_id" integer NOT NULL,
+	"subject_id" integer NOT NULL,
+	"hours_spent" numeric NOT NULL,
+	"session_id" integer,
+	"description" text,
+	"week_start_date" timestamp with time zone,
+	"total_hours" numeric,
+	"recorded_date" timestamp with time zone NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "session_progress" (
+	"progress_id" serial PRIMARY KEY NOT NULL,
+	"child_id" integer NOT NULL,
+	"subject_id" integer NOT NULL,
+	"progress_percentage" integer DEFAULT 0,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "tutoring_sessions" (
+	"session_id" serial PRIMARY KEY NOT NULL,
+	"child_id" integer NOT NULL,
+	"tutor_id" integer NOT NULL,
+	"subject_id" integer NOT NULL,
+	"title" varchar(255) NOT NULL,
+	"description" text,
+	"start_time" timestamp NOT NULL,
+	"end_time" timestamp NOT NULL,
+	"topic" varchar(255),
+	"cancelled" boolean DEFAULT false,
+	"completed" boolean DEFAULT false,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "tutors" (
+	"tutor_id" integer PRIMARY KEY NOT NULL,
+	"bio" text,
+	"is_verified" boolean DEFAULT false NOT NULL,
+	"subject_id" integer NOT NULL,
+	"grade_id" integer NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "cities" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(100) NOT NULL,
@@ -31,16 +97,6 @@ CREATE TABLE "tutor_availability_slots" (
 	"day_of_week" "day_of_week_enum"[] NOT NULL,
 	"start_time" time NOT NULL,
 	"end_time" time NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "tutors" (
-	"tutor_id" integer PRIMARY KEY NOT NULL,
-	"bio" text,
-	"is_verified" boolean DEFAULT false NOT NULL,
-	"subject_id" integer NOT NULL,
-	"grade_id" integer NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -101,9 +157,19 @@ CREATE TABLE "refresh_tokens" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "achievements" ADD CONSTRAINT "achievements_child_id_children_child_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("child_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "dashboard_settings" ADD CONSTRAINT "dashboard_settings_child_id_children_child_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("child_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "learning_hours" ADD CONSTRAINT "learning_hours_child_id_children_child_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("child_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "learning_hours" ADD CONSTRAINT "learning_hours_subject_id_subjects_subject_id_fk" FOREIGN KEY ("subject_id") REFERENCES "public"."subjects"("subject_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "learning_hours" ADD CONSTRAINT "learning_hours_session_id_tutoring_sessions_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."tutoring_sessions"("session_id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_progress" ADD CONSTRAINT "session_progress_child_id_children_child_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("child_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_progress" ADD CONSTRAINT "session_progress_subject_id_subjects_subject_id_fk" FOREIGN KEY ("subject_id") REFERENCES "public"."subjects"("subject_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tutoring_sessions" ADD CONSTRAINT "tutoring_sessions_child_id_children_child_id_fk" FOREIGN KEY ("child_id") REFERENCES "public"."children"("child_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tutoring_sessions" ADD CONSTRAINT "tutoring_sessions_tutor_id_tutors_tutor_id_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."tutors"("tutor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tutoring_sessions" ADD CONSTRAINT "tutoring_sessions_subject_id_subjects_subject_id_fk" FOREIGN KEY ("subject_id") REFERENCES "public"."subjects"("subject_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tutors" ADD CONSTRAINT "tutors_tutor_id_users_userId_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."users"("userId") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cities" ADD CONSTRAINT "cities_stateId_states_id_fk" FOREIGN KEY ("stateId") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tutor_availability_slots" ADD CONSTRAINT "tutor_availability_slots_tutor_id_tutors_tutor_id_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."tutors"("tutor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tutors" ADD CONSTRAINT "tutors_tutor_id_users_userId_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."users"("userId") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "verification_details" ADD CONSTRAINT "verification_details_tutor_id_tutors_tutor_id_fk" FOREIGN KEY ("tutor_id") REFERENCES "public"."tutors"("tutor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_stateId_states_id_fk" FOREIGN KEY ("stateId") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_cityId_cities_id_fk" FOREIGN KEY ("cityId") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

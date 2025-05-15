@@ -10,6 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 import { SubjectGradeModule } from './SubjectGrade/SubjectGrade.module';
 import { StudentModule } from './student/student.module';
 import { ParentModule } from './parent/parent.module'; // Import ParentModule
+import { ChildModule } from './child/child.module'; // Import the new ChildModule
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ParentModule } from './parent/parent.module'; // Import ParentModule
     SubjectGradeModule,
     StudentModule,
     ParentModule, // Add ParentModule here
+    ChildModule, // Add ChildModule here
   ],
   controllers: [UsersController, TutorsController, AddressController],
   providers: [UsersService, TutorsService, AddressService],

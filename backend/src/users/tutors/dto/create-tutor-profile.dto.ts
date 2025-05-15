@@ -6,7 +6,7 @@ export class CreateTutorProfileDto {
     description: 'Tutor bio',
     maxLength: 5000,
     required: false,
-    example: 'Experienced tutor with 5 years of teaching experience.'
+    example: 'Experienced tutor with 5 years of teaching experience.',
   })
   @IsOptional()
   @IsString()
@@ -16,7 +16,7 @@ export class CreateTutorProfileDto {
   @ApiProperty({
     description: 'ID of the subject the tutor can teach',
     required: true,
-    example: 1
+    example: 1,
   })
   @IsNumber()
   subjectId: number;
@@ -24,7 +24,7 @@ export class CreateTutorProfileDto {
   @ApiProperty({
     description: 'ID of the grade level the tutor can teach',
     required: true,
-    example: 1
+    example: 1,
   })
   @IsNumber()
   gradeId: number;

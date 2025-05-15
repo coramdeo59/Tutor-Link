@@ -1,7 +1,5 @@
-import { Controller, Post, Body, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Post, Param, ParseIntPipe } from '@nestjs/common';
 import { ParentService } from './parent.service';
-import { CreateChildDto } from './dtos/create-child.dto';
-import { ChildLoginDto } from './dtos/child-login.dto'; // Import ChildLoginDto
 import { AuthType } from 'src/auth/authentication/enums/auth-type.enum';
 import { Auth } from 'src/auth/authentication/decorators/auth-decorator';
 
@@ -11,33 +9,12 @@ export class ParentController {
   constructor(private readonly parentService: ParentService) {}
 
   /**
-   * Add a child to a parent's profile with direct login credentials
-   * This creates a child record and links it to the parent
+   * Ensure a parent record exists for a user
+   * This helps fix data integrity issues where parent users existed without parent records
    */
-  @Post(':parentId/children')
-  async addChild(
-    @Param('parentId', ParseIntPipe) parentId: number,
-    @Body() createChildDto: CreateChildDto,
-  ) {
-    // Ensure the user is adding a child to their own profile
-    // if (user.userId !== parentId) {
-    //   throw new UnauthorizedException('You can only add children to your own profile');
-    // }
-
-    // Set the parentId in the DTO
-    createChildDto.parentId = parentId;
-
-    return this.parentService.addChild(createChildDto);
-  }
-
-  /**
-   * Login as a child using username and password
-   */
-  @Post('children/login')
-  @Auth(AuthType.None)
-  async loginChild(@Body() childLoginDto: ChildLoginDto) {
-    // Updated to use ChildLoginDto
-    // Validation for username and password presence is handled by class-validator in ChildLoginDto
-    return this.parentService.loginChild(childLoginDto);
+  @Post('ensure-record/:userId')
+  async ensureParentRecord(@Param('userId', ParseIntPipe) userId: number) {
+    const recordCreated = await this.parentService.createParentRecord(userId);
+    return { success: recordCreated };
   }
 }
