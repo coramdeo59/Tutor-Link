@@ -4,7 +4,7 @@ import { UsersController } from './users.controller';
 import { TutorsController } from './tutors/tutors.controller';
 import { TutorsService } from './tutors/tutors.service';
 import { CoreModule } from 'src/core/core.module';
-import { AddressController } from './address/addres.controller';
+import { AddressController } from './address/address.controller';
 import { AddressService } from './address/address.service';
 import { AuthModule } from '../auth/auth.module';
 import { SubjectGradeModule } from './SubjectGrade/SubjectGrade.module';
