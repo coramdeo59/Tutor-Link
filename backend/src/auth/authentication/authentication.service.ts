@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  forwardRef,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import { SignInDto } from './dto/sign-in.dto/sign-in.dto';
 import { JwtService } from '@nestjs/jwt';
 import jwtConfig from '../../config/jwt.config';
 import { ConfigType } from '@nestjs/config';
+import { ParentService } from 'src/users/parent/parent.service';
 import { ActiveUserData } from '../interfaces/active-user-data.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RefreshTokenIdsStorage } from './refresh-token-ids.storage/refresh-token-ids.storage';
@@ -37,6 +39,8 @@ export class AuthenticationService {
     @Inject(jwtConfig.KEY)
     private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
     private readonly refreshTokenIdsStorage: RefreshTokenIdsStorage,
+    @Inject(forwardRef(() => ParentService))
+    private readonly parentService: ParentService,
   ) {}
 
   async signUp(signUpDto: SignUpDto) {
@@ -49,7 +53,7 @@ export class AuthenticationService {
     try {
       const hashedPassword = await this.hashingService.hash(signUpDto.password);
 
-      const [user] = await this.database
+      const result = await this.database
         .insert(userSchema.users)
         .values({
           firstName: signUpDto.firstName,
@@ -65,6 +69,19 @@ export class AuthenticationService {
         })
         .returning();
 
+      // Make sure we have a user returned
+      if (result.length === 0) {
+        throw new Error('Failed to create user');
+      }
+      
+      // Using non-null assertion to tell TypeScript that user will be defined
+      const user = result[0]!;
+      
+      // If the user is a parent, create a parent record
+      if (signUpDto.userType === 'parent' && user && user.userId) {
+        await this.parentService.createParentRecord(user.userId);
+      }
+      
       return user;
     } catch (err) {
       // Log the error for debugging

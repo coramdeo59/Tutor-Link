@@ -12,6 +12,7 @@ import { Role } from 'src/users/enums/role-enums';
 export enum UserType {
   TUTOR = 'tutor',
   PARENT = 'parent',
+  ADMIN = 'admin',
 }
 
 export class SignUpDto {
