@@ -48,4 +48,13 @@ export class AddressController {
   async getCitiesByState(@Param('stateId', ParseIntPipe) stateId: number) {
     return this.addressService.getCitiesByState(stateId);
   }
+
+  /**
+   * Get all cities and states in a single request
+   * @returns Object containing all states and cities with their state information
+   */
+  @Get('all')
+  async getAllCitiesAndStates() {
+    return this.addressService.getAllCitiesAndStates();
+  }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { HashingService } from './hashing/hashing.service';
 import { BcryptService } from './hashing/bcrypt.service';
 import { AuthenticationController } from './authentication/authentication.controller';
@@ -12,12 +12,14 @@ import { AuthenticationGuard } from './authentication/guards/authentication/auth
 import { RefreshTokenIdsStorage } from './authentication/refresh-token-ids.storage/refresh-token-ids.storage';
 import { RolesGuard } from './authentication/guards/roles/roles.guard';
 import { AddressModule } from '../users/address/address.module'; // Corrected import path
+import { ParentModule } from '../users/parent/parent.module'; // Import ParentModule for ParentService
 
 @Module({
   imports: [
     JwtModule.registerAsync(jwtConfig.asProvider()),
     ConfigModule.forFeature(jwtConfig),
     AddressModule,
+    forwardRef(() => ParentModule), // Adding ParentModule with forwardRef to break circular dependency
   ],
   controllers: [AuthenticationController],
   providers: [

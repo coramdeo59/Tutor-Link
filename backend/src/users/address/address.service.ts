@@ -210,4 +210,29 @@ export class AddressService {
 
     return enrichedCities;
   }
+
+  /**
+   * Get all cities and states in a single request
+   * This is useful for populating location dropdowns in the frontend
+   * @returns Object containing all states and cities with their state information
+   */
+  async getAllCitiesAndStates() {
+    try {
+      // Get all states
+      const states = await this.getAllStates();
+
+      // Get all cities with state info
+      const cities = await this.getAllCitiesWithStates();
+
+      return {
+        states,
+        cities,
+      };
+    } catch (error) {
+      console.error('Error fetching cities and states:', error);
+      throw new InternalServerErrorException(
+        `Failed to fetch cities and states: ${error.message}`,
+      );
+    }
+  }
 }
