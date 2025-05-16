@@ -124,16 +124,63 @@ export class TutorsService {
    * Retrieves a tutor's profile by their user ID.
    */
   async getTutorProfile(userId: number): Promise<Tutor> {
-    const tutorProfile = await this.database.query.tutors.findFirst({
+    const tutor = await this.database.query.tutors.findFirst({
       where: eq(tutorSchema.tutors.tutorId, userId),
     });
 
-    if (!tutorProfile) {
-      throw new NotFoundException(
-        `Tutor profile not found for user ID ${userId}.`,
-      );
+    if (!tutor) {
+      throw new NotFoundException(`Tutor profile not found for user ID ${userId}`);
     }
-    return tutorProfile;
+
+    return tutor;
+  }
+  
+  /**
+   * Gets the application status of a tutor
+   * @param tutorId The ID of the tutor (which is also the userId)
+   * @returns Object containing the verification status and other relevant status information
+   */
+  async getTutorApplicationStatus(tutorId: number): Promise<{
+    verificationStatus: string;
+    backgroundCheckStatus: string;
+    documentVerified: boolean;
+    interviewScheduled: boolean;
+    isVerified: boolean;
+    rejectionReason?: string;
+    pendingStep?: string;
+  }> {
+    const tutor = await this.database.query.tutors.findFirst({
+      where: eq(tutorSchema.tutors.tutorId, tutorId),
+    });
+
+    if (!tutor) {
+      throw new NotFoundException(`Tutor profile not found for user ID ${tutorId}`);
+    }
+    
+    // Determine which step is pending in the verification process
+    let pendingStep: string | undefined;
+    
+    if (tutor.verificationStatus === 'pending') {
+      if (!tutor.documentVerified) {
+        pendingStep = 'document_verification';
+      } else if (tutor.backgroundCheckStatus === 'pending') {
+        pendingStep = 'background_check';
+      } else if (!tutor.interviewScheduled) {
+        pendingStep = 'interview_scheduling';
+      } else {
+        pendingStep = 'admin_review';
+      }
+    }
+
+    return {
+      verificationStatus: tutor.verificationStatus,
+      backgroundCheckStatus: tutor.backgroundCheckStatus,
+      documentVerified: tutor.documentVerified,
+      interviewScheduled: tutor.interviewScheduled,
+      isVerified: tutor.isVerified,
+      rejectionReason: tutor.rejectionReason || undefined,
+      pendingStep,
+    };
   }
 
   /**
