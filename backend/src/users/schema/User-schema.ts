@@ -11,7 +11,7 @@ import { tutors } from './Tutor-schema';
 import { cities, states } from './Address-schema';
 
 export const roleEnum = pgEnum('role_enum', ['admin', 'regular']);
-export const userTypeEnum = pgEnum('user_type_enum', ['tutor', 'parent']);
+export const userTypeEnum = pgEnum('user_type_enum', ['tutor', 'parent', 'admin']);
 
 export const users = pgTable('users', {
   userId: serial('userId').primaryKey(),
@@ -20,6 +20,7 @@ export const users = pgTable('users', {
   firstName: varchar('firstName', { length: 100 }).notNull(),
   lastName: varchar('lastName', { length: 100 }).notNull(),
   photo: varchar('photo', { length: 255 }),
+  // profilePictureUrl field removed as it doesn't exist in the database
   stateId: integer('stateId') // Added stateId
     .references(() => states.id)
     .notNull(),
@@ -29,6 +30,7 @@ export const users = pgTable('users', {
   phoneNumber: varchar('phoneNumber', { length: 50 }).notNull(),
   userType: userTypeEnum('userType').notNull(),
   role: roleEnum('role').notNull().default('regular'),
+  // lastLoginAt field removed as it doesn't exist in the database
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

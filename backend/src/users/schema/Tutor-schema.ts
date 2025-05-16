@@ -13,6 +13,20 @@ import {
 import { relations } from 'drizzle-orm';
 import { users } from './User-schema';
 
+// Enum for verification status
+export const verificationStatusEnum = pgEnum('verification_status', [
+  'pending',
+  'approved',
+  'rejected',
+]);
+
+// Enum for background check status
+export const backgroundCheckStatusEnum = pgEnum('background_check_status', [
+  'pending',
+  'passed',
+  'failed',
+]);
+
 export const tutors = pgTable('tutors', {
   tutorId: integer('tutor_id')
     .primaryKey()
@@ -21,6 +35,13 @@ export const tutors = pgTable('tutors', {
   isVerified: boolean('is_verified').default(false).notNull(),
   subjectId: integer('subject_id').notNull(),
   gradeId: integer('grade_id').notNull(),
+  approved: boolean('approved').default(false).notNull(),
+  approvedAt: timestamp('approved_at'),
+  verificationStatus: verificationStatusEnum('verification_status').default('pending').notNull(),
+  backgroundCheckStatus: backgroundCheckStatusEnum('background_check_status').default('pending').notNull(),
+  documentVerified: boolean('document_verified').default(false).notNull(),
+  interviewScheduled: boolean('interview_scheduled').default(false).notNull(),
+  rejectionReason: text('rejection_reason'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
