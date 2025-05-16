@@ -235,4 +235,19 @@ export class AddressService {
       );
     }
   }
+
+  /**
+   * Get all cities
+   * Returns all cities without state information
+   */
+  async getAllCities() {
+    try {
+      return await this.database.select().from(addressSchema.cities);
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+      throw new InternalServerErrorException(
+        `Failed to fetch cities: ${error.message}`,
+      );
+    }
+  }
 }

@@ -57,4 +57,13 @@ export class AddressController {
   async getAllCitiesAndStates() {
     return this.addressService.getAllCitiesAndStates();
   }
+
+  /**
+   * Get all cities
+   * @returns List of all cities
+   */
+  @Get('cities')
+  async getAllCities() {
+    return this.addressService.getAllCities();
+  }
 }
