@@ -25,7 +25,7 @@ import { InvalidatedRefreshTokenError } from './exceptions/invalidated-refresh-t
 import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
 import { pgUniqueViolationsErrorCode } from '../constant/pg-violation';
 
-// Removed unused UserSelect type alias
+
 
 @Injectable()
 export class AuthenticationService {

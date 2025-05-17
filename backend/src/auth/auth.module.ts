@@ -13,6 +13,7 @@ import { RefreshTokenIdsStorage } from './authentication/refresh-token-ids.stora
 import { RolesGuard } from './authentication/guards/roles/roles.guard';
 import { AddressModule } from '../users/address/address.module'; // Corrected import path
 import { ParentModule } from '../users/parent/parent.module'; // Import ParentModule for ParentService
+import { UploadModule } from '../upload/upload.module'; // Import UploadModule for file uploads
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ParentModule } from '../users/parent/parent.module'; // Import ParentMo
     ConfigModule.forFeature(jwtConfig),
     AddressModule,
     forwardRef(() => ParentModule), // Adding ParentModule with forwardRef to break circular dependency
+    UploadModule, // Add UploadModule to use UploadService
   ],
   controllers: [AuthenticationController],
   providers: [
