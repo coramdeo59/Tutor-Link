@@ -1,333 +1,111 @@
 import {
   Controller,
-  Post,
   Get,
+  Post,
+  Put,
   Param,
-  ParseIntPipe,
   Body,
-  UnauthorizedException,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { ChildService } from './child.service';
-import { CreateChildDto } from '../parent/dtos/create-child.dto';
-import { ChildLoginDto } from '../parent/dtos/child-login.dto';
 import { AuthType } from 'src/auth/authentication/enums/auth-type.enum';
-import { Auth } from 'src/auth/authentication/decorators/auth-decorator';
-import { ActiveUser } from 'src/auth/Decorators/active-user.decorator';
-import { ActiveUserData } from 'src/auth/interfaces/active-user-data.interface';
-import { Role } from 'src/users/enums/role-enums';
+import { Auth } from 'src/auth/authentication/decorators/auth.decorator';
+import { ActiveUser } from 'src/auth/authentication/decorators/active-user.decorator';
+import { AuthenticationService } from 'src/auth/authentication/authentication.service';
+import { ChildSignInDto } from './dto/child-sign-in.dto';
+import { CreateChildDto } from './dto/create-child.dto';
+import { ActiveUserData } from 'src/auth/interfaces/active-user.data.interface';
 
-@Controller('children')
+@Controller('users/children')
+@Auth(AuthType.Bearer)
 export class ChildController {
-  constructor(private readonly childService: ChildService) {}
+  constructor(
+    private readonly childService: ChildService,
+    private readonly authService: AuthenticationService
+  ) {}
 
   /**
-   * Add a child to a parent's profile with direct login credentials
-   * This creates a child record and links it to the parent
+   * Get all children for the authenticated parent
+   * @param user The authenticated user data
+   * @returns Array of children belonging to the parent
    */
-  @Auth(AuthType.Bearer) // Requires authentication for parent operations
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  async addChild(
-    @ActiveUser() activeUser: ActiveUserData,
+  @Get()
+  async getChildrenForParent(
+    @ActiveUser() user: ActiveUserData
+  ) {
+    if (!user || !user.sub) {
+      throw new BadRequestException('Invalid user information');
+    }
+    
+    try {
+      return await this.childService.findByParent(user.sub);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific child's information (only if they belong to the authenticated parent)
+   * @param id The ID of the child
+   * @param user The authenticated user data
+   * @returns Child information if found and authorized
+   */
+  @Get(':id')
+  async findOne(
+    @Param('id') id: string,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    if (!user || !user.sub) {
+      throw new BadRequestException('Invalid user information');
+    }
+    
+    return this.childService.findChildForParent(id, user.sub);
+  }
+
+  @Post()
+  @Auth(AuthType.Bearer)
+  async create(
     @Body() createChildDto: CreateChildDto,
+    @ActiveUser() user: ActiveUserData
   ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
+    if (!user || !user.sub) {
+      throw new BadRequestException('Invalid user information');
     }
 
-    // Set the parentId in the DTO using the authenticated user's ID
-    // Ensure it's set as a number
-    createChildDto.parentId = Number(activeUser.sub);
+    // Only parents should be able to create child accounts
+    if (user.role !== 'parent') {
+      throw new BadRequestException('Only parent can create child accounts');
+    }
 
-    // Log for debugging
-    console.log('Adding child with parentId:', createChildDto.parentId);
-    console.log('Active user data:', activeUser);
-
-    return this.childService.addChild(createChildDto);
+    return this.childService.create(createChildDto, user.sub);
   }
 
-  /**
-   * Login as a child using username and password
-   */
-  @Post('login')
-  @Auth(AuthType.None)
-  async loginChild(@Body() childLoginDto: ChildLoginDto) {
-    return this.childService.loginChild(childLoginDto);
-  }
-
-  /**
-   * Get a child's profile with upcoming tutoring sessions
-   * This is used for the child dashboard
-   */
-  @Get('profile')
-  @Auth(AuthType.Bearer)
-  async getChildProfile(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getChildProfile(childId);
-  }
-
-  /**
-   * Get the complete dashboard for the authenticated child
-   * Includes profile, upcoming sessions, learning hours, progress, and achievements
-   */
-  @Get('dashboard')
-  @Auth(AuthType.Bearer)
-  async getChildDashboard(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getChildDashboard(childId);
-  }
-
-  /**
-   * Get a specific child's profile (for parent access)
-   */
-  @Get(':childId/profile')
-  @Auth(AuthType.Bearer)
-  async getSpecificChildProfile(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
+  @Put(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateChildDto: any
   ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    // For now, we'll just return the child profile
-    return this.childService.getChildProfile(childId);
+    return this.childService.update(id, updateChildDto);
   }
 
-  /**
-   * Get the complete dashboard for a specific child (for parent access)
-   * Includes profile, upcoming sessions, learning hours, progress, and achievements
-   */
-  @Get(':childId/dashboard')
-  @Auth(AuthType.Bearer)
-  async getSpecificChildDashboard(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    return this.childService.getChildDashboard(childId);
-  }
+  // @Delete(':id')
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // async remove(@Param('id', ParseIntPipe) id: number) {
+  //   return this.childService.remove(id);
+  // }
 
   /**
-   * Get upcoming tutoring sessions for the authenticated child
+   * Child sign-in endpoint - allows children to authenticate using username/password
+   * @param childSignInDto Contains username and password
+   * @returns Access and refresh tokens upon successful authentication
    */
-  @Get('sessions/upcoming')
-  @Auth(AuthType.Bearer)
-  async getUpcomingSessions(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getUpcomingSessions(childId);
-  }
-
-  /**
-   * Get learning hours summary for the authenticated child
-   */
-  @Get('learning/hours')
-  @Auth(AuthType.Bearer)
-  async getLearningHours(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getWeeklyLearningHoursSummary(childId);
-  }
-
-  /**
-   * Get learning progress for the authenticated child
-   */
-  @Get('learning/progress')
-  @Auth(AuthType.Bearer)
-  async getLearningProgress(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getChildLearningProgress(childId);
-  }
-
-  /**
-   * Get achievements for the authenticated child
-   */
-  @Get('achievements')
-  @Auth(AuthType.Bearer)
-  async getAchievements(@ActiveUser() activeUser: ActiveUserData) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a child account
-    if (activeUser.role !== Role.Child) {
-      throw new UnauthorizedException(
-        'Only child accounts can access this endpoint',
-      );
-    }
-
-    const childId = Number(activeUser.sub);
-    return this.childService.getChildAchievements(childId);
-  }
-
-  /**
-   * Get upcoming sessions for a specific child (for parent access)
-   */
-  @Get(':childId/sessions/upcoming')
-  @Auth(AuthType.Bearer)
-  async getChildUpcomingSessions(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    return this.childService.getUpcomingSessions(childId);
-  }
-
-  /**
-   * Get learning hours for a specific child (for parent access)
-   */
-  @Get(':childId/learning/hours')
-  @Auth(AuthType.Bearer)
-  async getChildLearningHours(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    return this.childService.getWeeklyLearningHoursSummary(childId);
-  }
-
-  /**
-   * Get learning progress for a specific child (for parent access)
-   */
-  @Get(':childId/learning/progress')
-  @Auth(AuthType.Bearer)
-  async getChildLearningProgress(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    return this.childService.getChildLearningProgress(childId);
-  }
-
-  /**
-   * Get achievements for a specific child (for parent access)
-   */
-  @Get(':childId/achievements')
-  @Auth(AuthType.Bearer)
-  async getChildAchievements(
-    @Param('childId', ParseIntPipe) childId: number,
-    @ActiveUser() activeUser: ActiveUserData,
-  ) {
-    if (!activeUser || !activeUser.sub) {
-      throw new UnauthorizedException('Authentication required');
-    }
-
-    // Ensure user is a parent
-    if (activeUser.role !== Role.Parent) {
-      throw new UnauthorizedException(
-        'Only parent accounts can access this endpoint',
-      );
-    }
-
-    // In a real application, you would verify that this child belongs to this parent
-    return this.childService.getChildAchievements(childId);
+  @Post('auth/signin')
+  @HttpCode(HttpStatus.OK)
+  @Auth(AuthType.None) // Exempt this endpoint from authentication requirements
+  async signIn(@Body() childSignInDto: ChildSignInDto) {
+    return this.authService.childSignIn(childSignInDto);
   }
 }

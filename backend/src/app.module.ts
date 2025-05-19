@@ -3,25 +3,27 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
 import { CoreModule } from './core/core.module';
-import { UploadModule } from './upload/upload.module';
-import { TutoringModule } from './tutoring/tutoring.module';
-import { AdminModule } from './admin/admin.module';
-import { NotificationModule } from './notifications/notification.module';
-// import { MessagingModule } from './messaging/messaging.module';
+import { ParentModule } from './users/parent/parent.module';
+import { TutorsModule } from './users/tutors/tutors.module';
+import { ChildModule } from './users/child/child.module';
+import { AdminModule } from './users/admin/admin.module';
+import { MailerModule } from './mailer/mailer.module';
+import { PaymentModule } from './payment/payment.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
-    UsersModule,
     CoreModule,
-    UploadModule,
-    TutoringModule,
+    ParentModule,
+    TutorsModule,
+    ChildModule,
     AdminModule,
-    NotificationModule,
-    // MessagingModule,
+    PaymentModule,
+    MailerModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

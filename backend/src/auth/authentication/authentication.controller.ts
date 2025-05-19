@@ -1,63 +1,68 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseInterceptors, UploadedFile, ParseFilePipeBuilder } from '@nestjs/common';
-import { AuthenticationService } from './authentication.service';
-import { SignInDto } from './dto/sign-in.dto/sign-in.dto';
-import { Auth } from './decorators/auth-decorator';
-import { AuthType } from './enums/auth-type.enum';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { SignUpDto } from './dto/sign-up.dto/sign-up.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { UploadService, UploadType } from '../../upload/upload.service';
+import {
+	Controller,
+	Post,
+	Body,
+	HttpCode,
+	HttpStatus,
+	Delete,
+} from "@nestjs/common";
+import { AuthenticationService } from "./authentication.service";
+import { SignUpDto } from "./dto/sign-up.dto";
+import { TutorSignUpDto } from "./dto/tutor-sign-up.dto";
+import { ParentSignUpDto } from "./dto/parent-sign-up.dto";
+import { AdminSignUpDto } from "./dto/admin-sign-up.dto";
+import { SignInDto } from "./dto/sign-in.dto";
+import { AuthType } from "./enums/auth-type.enum";
+import { Auth } from "./decorators/auth.decorator";
+import { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { ActiveUser } from "../decorator/active-user.decorator";
+import { ActiveUserData } from "../interfaces/active-user.data.interface";
 
 @Auth(AuthType.None)
-@Controller('auth')
-export class AuthenticationController {
-  constructor(
-    private readonly authService: AuthenticationService,
-    private readonly uploadService: UploadService
-  ) {}
+@Controller("auth")
 
-  @Post('sign-up')
-  async signUp(@Body() signUpDto: SignUpDto): Promise<any> {
-    return this.authService.signUp(signUpDto);
-  }
-  
-  /**
-   * Enhanced sign-up endpoint that supports profile photo upload
-   * This endpoint accepts multipart/form-data with a JSON signUpDto and an optional profile photo
-   */
-  @Post('sign-up-with-photo')
-  @UseInterceptors(FileInterceptor('profilePhoto', {
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB
-    },
-  }))
-  async signUpWithPhoto(
-    @Body() signUpDto: SignUpDto,
-    @UploadedFile(new ParseFilePipeBuilder()
-      .addFileTypeValidator({ fileType: /(jpg|jpeg|png|gif|webp)$/ })
-      .build({
-        fileIsRequired: false,
-      })
-    ) profilePhoto?: Express.Multer.File,
-  ): Promise<any> {
-    // Handle the profile photo upload if a file was provided
-    if (profilePhoto) {
-      const uploadedFile = await this.uploadService.processUploadedFile(profilePhoto, UploadType.PROFILE_PICTURE);
-      // Set the photo URL in the DTO
-      signUpDto.photo = uploadedFile.secureUrl;
-    }
-    
-    // Now proceed with normal sign-up process
-    return this.authService.signUp(signUpDto);
-  }
-  @HttpCode(HttpStatus.OK)
-  @Post('sign-in')
-  async signIn(@Body() signInDto: SignInDto): Promise<any> {
-    return this.authService.signIn(signInDto);
-  }
-  @HttpCode(HttpStatus.OK)
-  @Post('refresh-tokens')
-  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto): Promise<any> {
-    return this.authService.refreshTokens(refreshTokenDto);
-  }
+export class AuthenticationController {
+	constructor(private readonly authService: AuthenticationService) {}
+
+	@Post("sign-up")
+	async signup(@Body() signUpDto: SignUpDto) {
+		return this.authService.signup(signUpDto);
+	}
+
+
+	@Post("sign-up/tutor")
+	async signupTutor(@Body() signUpDto: TutorSignUpDto) {
+		return this.authService.signup(signUpDto);
+	}
+
+	@Post("sign-up/parent")
+	async signupParent(@Body() signUpDto: ParentSignUpDto) {
+		return this.authService.signup(signUpDto);
+	}
+
+	@Post("sign-up/admin")
+	async signupAdmin(@Body() signUpDto: AdminSignUpDto) {
+		return this.authService.signup(signUpDto);
+	}
+
+	@HttpCode(HttpStatus.OK)
+	@Post("sign-in")
+	async signin(@Body() signInDto: SignInDto) {
+		return await this.authService.signIn(signInDto);
+	}
+
+	@HttpCode(HttpStatus.OK)
+	@Post("refresh-tokens")
+
+	async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+		return await this.authService.refreshTokens(refreshTokenDto);
+	}
+
+	@HttpCode(HttpStatus.OK)
+	@Delete("sign-out")
+	@Auth(AuthType.Bearer)
+	async signOut(@ActiveUser() user: ActiveUserData) {
+		return await this.authService.signOut(user.sub);
+	}
 }
+ 

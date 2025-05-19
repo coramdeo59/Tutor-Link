@@ -2,11 +2,11 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import * as userSchema from '../users/schema/User-schema';
-import * as addressSchema from '../users/schema/Address-schema';
-import * as tutorSchema from '../users/schema/Tutor-schema';
-import * as subjectGradeSchema from '../users/schema/SubjectGrade-schema';
-import { DrizzleService } from './drizzle.service';
+import { admin } from '../users/admin/schema/admin.schema';
+import { tutors } from '../users/tutors/schema/tutor.schema';
+import { parents } from '../users/parent/schema/parent.schema';
+import { refreshTokens } from '../auth/authentication/refresh-token-ids.storage/schema/refresh-tokens.schema';
+import { passwordResetTokens } from '../auth/authentication/schema/password-reset-tokens.schema';
 import { DATABASE_CONNECTION } from './database-connection';
 import databaseConfig from '../config/databse-config';
 
@@ -47,10 +47,19 @@ import databaseConfig from '../config/databse-config';
 
         return drizzle(pool, {
           schema: {
-            ...userSchema,
-            ...addressSchema,
-            ...tutorSchema,
-            ...subjectGradeSchema,
+            admin,
+            tutors,
+            parents,
+            refreshTokens,
+            passwordResetTokens,
+            children: require('../users/parent/schema/parent.schema').children,
+            tutorSubjects: require('../users/tutors/schema/tutor.schema').tutorSubjects,
+            tutorGrades: require('../users/tutors/schema/tutor.schema').tutorGrades,
+            tutorAvailability: require('../users/tutors/schema/tutor.schema').tutorAvailability,
+            tutorVerifications: require('../users/tutors/schema/tutor.schema').tutorVerifications,
+            // Scheduler module schema
+            tutoringSessions: require('../scheduler/schema/scheduler.schema').tutoringSessions,
+            tutorUnavailableDates: require('../scheduler/schema/scheduler.schema').tutorUnavailableDates,
           },
         });
       },
@@ -60,8 +69,7 @@ import databaseConfig from '../config/databse-config';
       provide: 'drizzle',
       useExisting: DATABASE_CONNECTION,
     },
-    DrizzleService,
   ],
-  exports: [DATABASE_CONNECTION, 'drizzle', DrizzleService],
+  exports: [DATABASE_CONNECTION],
 })
 export class CoreModule {}

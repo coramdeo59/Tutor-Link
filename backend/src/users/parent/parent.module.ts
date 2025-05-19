@@ -1,19 +1,12 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ParentController } from './parent.controller';
 import { ParentService } from './parent.service';
-import { CoreModule } from 'src/core/core.module'; // Assuming DB connection is managed here
-import { AuthModule } from 'src/auth/auth.module'; // For HashingService and AuthenticationService
+import { CoreModule } from '../../core/core.module';
 
 @Module({
-  imports: [
-    CoreModule, // Provides DATABASE_CONNECTION
-    forwardRef(() => AuthModule), // Using forwardRef to break circular dependency
-  ],
+  imports: [CoreModule],
   controllers: [ParentController],
-  providers: [
-    ParentService,
-    // The HashingService is already provided by AuthModule, so we don't need to re-provide it
-  ],
+  providers: [ParentService],
   exports: [ParentService],
 })
-export class ParentModule {}
+export class ParentModule {} 

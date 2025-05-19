@@ -1,371 +1,426 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  InternalServerErrorException,
-  ConflictException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Inject } from '@nestjs/common';
 import { DATABASE_CONNECTION } from '../../core/database-connection';
-import * as tutorSchema from '../schema/Tutor-schema';
-import * as userSchema from '../schema/User-schema';
-import * as subjectGradeSchema from '../schema/SubjectGrade-schema';
-import { CreateTutorProfileDto } from './dto/create-tutor-profile.dto';
-import { CreateVerificationDetailsDto } from './dto/create-verification-details.dto'; // Import DTO
+import * as tutorSchema from './schema/tutor.schema';
+import { AddSubjectDto } from './dto/subject.dto';
 import { eq } from 'drizzle-orm';
-
-// Infer types for Drizzle ORM
-export type Tutor = typeof tutorSchema.tutors.$inferSelect;
-export type NewTutor = typeof tutorSchema.tutors.$inferInsert;
-export type VerificationDetails =
-  typeof tutorSchema.verificationDetails.$inferSelect;
-export type TutorAvailabilitySlot =
-  typeof tutorSchema.tutorAvailabilitySlots.$inferSelect;
 
 @Injectable()
 export class TutorsService {
   constructor(
     @Inject(DATABASE_CONNECTION)
-    private readonly database: NodePgDatabase<{
-      users: typeof userSchema.users;
+    private readonly db: NodePgDatabase<{
       tutors: typeof tutorSchema.tutors;
-      verificationDetails: typeof tutorSchema.verificationDetails;
-      tutorAvailabilitySlots: typeof tutorSchema.tutorAvailabilitySlots;
-      subjects: typeof subjectGradeSchema.subjects;
-      gradeLevels: typeof subjectGradeSchema.gradeLevels;
+      tutorSubjects: typeof tutorSchema.tutorSubjects;
+      tutorGrades: typeof tutorSchema.tutorGrades;
+      tutorAvailability: typeof tutorSchema.tutorAvailability;
+      tutorVerifications: typeof tutorSchema.tutorVerifications;
     }>,
   ) {}
 
-  /**
-   * Creates a new tutor profile.
-   * Assumes the user already exists and their ID is provided as tutorId.
-   * The `isVerified` field defaults to false as per the schema.
-   */
-  async createTutorProfile(
-    userId: number,
-    createTutorProfileDto: CreateTutorProfileDto,
-  ): Promise<Tutor> {
-    // 1. Check if the user exists
-    const userExists = await this.database.query.users.findFirst({
-      where: eq(userSchema.users.userId, userId),
-    });
-    if (!userExists) {
-      throw new NotFoundException(`User with ID ${userId} not found.`);
-    }
-
-    // 2. Check if a tutor profile already exists for this user
-    const existingTutorProfile = await this.database.query.tutors.findFirst({
-      where: eq(tutorSchema.tutors.tutorId, userId),
-    });
-    if (existingTutorProfile) {
-      throw new ConflictException(
-        `Tutor profile already exists for user ID ${userId}.`,
-      );
-    }
-
-    // 3. Validate that the subject exists
-    const subjectExists = await this.database.query.subjects.findFirst({
-      where: eq(
-        subjectGradeSchema.subjects.subjectId,
-        createTutorProfileDto.subjectId,
-      ),
-    });
-
-    if (!subjectExists) {
-      throw new BadRequestException(
-        `Subject with ID ${createTutorProfileDto.subjectId} not found.`,
-      );
-    }
-
-    // 4. Validate that the grade level exists
-    const gradeLevelExists = await this.database.query.gradeLevels.findFirst({
-      where: eq(
-        subjectGradeSchema.gradeLevels.gradeId,
-        createTutorProfileDto.gradeId,
-      ),
-    });
-
-    if (!gradeLevelExists) {
-      throw new BadRequestException(
-        `Grade level with ID ${createTutorProfileDto.gradeId} not found.`,
-      );
-    }
-
-    // 5. Create the tutor profile
+  async findAll() {
     try {
-      const [newTutor] = await this.database
+      // Get all tutors first
+      const tutors = await this.db.select().from(tutorSchema.tutors);
+      
+      // For each tutor, manually fetch their subjects and grades
+      const tutorsWithData = await Promise.all(tutors.map(async (tutor) => {
+        // Get subjects for this tutor
+        const subjects = await this.db.select()
+          .from(tutorSchema.tutorSubjects)
+          .where(eq(tutorSchema.tutorSubjects.tutorId, tutor.tutorId));
+          
+        // Get grades for this tutor
+        const grades = await this.db.select()
+          .from(tutorSchema.tutorGrades)
+          .where(eq(tutorSchema.tutorGrades.tutorId, tutor.tutorId));
+          
+        // Return the tutor with their related data
+        return {
+          ...tutor,
+          subjects,
+          grades
+        };
+      }));
+      
+      console.log(`Found ${tutors.length} tutors with related data`);
+      return tutorsWithData;
+    } catch (error) {
+      console.error('Error fetching tutors:', error);
+      throw new InternalServerErrorException('Failed to fetch tutors');
+    }
+  }
+
+  async findOne(id: number) {
+    try {
+      // Get the tutor first
+      const tutorResult = await this.db.select()
+        .from(tutorSchema.tutors)
+        .where(eq(tutorSchema.tutors.tutorId, id));
+        
+      if (!tutorResult || tutorResult.length === 0) {
+        return null;
+      }
+      
+      const tutor = tutorResult[0];
+      
+      // Get all related data separately
+      const subjects = await this.db.select()
+        .from(tutorSchema.tutorSubjects)
+        .where(eq(tutorSchema.tutorSubjects.tutorId, id));
+        
+      const grades = await this.db.select()
+        .from(tutorSchema.tutorGrades)
+        .where(eq(tutorSchema.tutorGrades.tutorId, id));
+        
+      const availability = await this.db.select()
+        .from(tutorSchema.tutorAvailability)
+        .where(eq(tutorSchema.tutorAvailability.tutorId, id));
+        
+      const verifications = await this.db.select()
+        .from(tutorSchema.tutorVerifications)
+        .where(eq(tutorSchema.tutorVerifications.tutorId, id));
+      
+      // Combine all data
+      const tutorWithRelations = {
+        ...tutor,
+        subjects,
+        grades,
+        availability,
+        verifications
+      };
+
+      if (!tutorWithRelations) {
+        throw new NotFoundException(`Tutor with ID ${id} not found`);
+      }
+
+      console.log(`Found tutor ${id} with related data`);
+      return tutorWithRelations;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error fetching tutor ${id}:`, error);
+      throw new InternalServerErrorException(`Failed to fetch tutor ${id}`);
+    }
+  }
+
+  async create(createTutorDto: any) {
+    try {
+      // Check if email already exists
+      if (createTutorDto.email) {
+        const existingTutor = await this.db.query.tutors.findFirst({
+          where: eq(tutorSchema.tutors.email, createTutorDto.email),
+        });
+
+        if (existingTutor) {
+          throw new ConflictException('Email already in use');
+        }
+      }
+
+      // Ensure required fields are present
+      const required = ['email', 'password', 'firstName', 'lastName', 'phoneNumber'];
+      for (const field of required) {
+        if (!createTutorDto[field]) {
+          throw new ConflictException(`${field} is required`);
+        }
+      }
+
+      const [newTutor] = await this.db
         .insert(tutorSchema.tutors)
-        .values({
-          tutorId: userId, // Link to the existing user
-          bio: createTutorProfileDto.bio,
-          subjectId: createTutorProfileDto.subjectId,
-          gradeId: createTutorProfileDto.gradeId,
-          // isVerified defaults to false in the schema
-        })
+        .values(createTutorDto as any)
         .returning();
 
-      if (!newTutor) {
-        throw new InternalServerErrorException(
-          'Failed to create tutor profile after insert.',
-        );
-      }
       return newTutor;
     } catch (error) {
-      console.error(
-        `Error creating tutor profile for user ID ${userId}:`,
-        error,
-      );
-      throw new InternalServerErrorException('Could not create tutor profile.');
-    }
-  }
-
-  /**
-   * Retrieves a tutor's profile by their user ID.
-   */
-  async getTutorProfile(userId: number): Promise<Tutor> {
-    const tutor = await this.database.query.tutors.findFirst({
-      where: eq(tutorSchema.tutors.tutorId, userId),
-    });
-
-    if (!tutor) {
-      throw new NotFoundException(`Tutor profile not found for user ID ${userId}`);
-    }
-
-    return tutor;
-  }
-  
-  /**
-   * Gets the application status of a tutor
-   * @param tutorId The ID of the tutor (which is also the userId)
-   * @returns Object containing the verification status and other relevant status information
-   */
-  async getTutorApplicationStatus(tutorId: number): Promise<{
-    verificationStatus: string;
-    backgroundCheckStatus: string;
-    documentVerified: boolean;
-    interviewScheduled: boolean;
-    isVerified: boolean;
-    rejectionReason?: string;
-    pendingStep?: string;
-  }> {
-    const tutor = await this.database.query.tutors.findFirst({
-      where: eq(tutorSchema.tutors.tutorId, tutorId),
-    });
-
-    if (!tutor) {
-      throw new NotFoundException(`Tutor profile not found for user ID ${tutorId}`);
-    }
-    
-    // Determine which step is pending in the verification process
-    let pendingStep: string | undefined;
-    
-    if (tutor.verificationStatus === 'pending') {
-      if (!tutor.documentVerified) {
-        pendingStep = 'document_verification';
-      } else if (tutor.backgroundCheckStatus === 'pending') {
-        pendingStep = 'background_check';
-      } else if (!tutor.interviewScheduled) {
-        pendingStep = 'interview_scheduling';
-      } else {
-        pendingStep = 'admin_review';
+      if (error instanceof ConflictException) {
+        throw error;
       }
+      console.error('Error creating tutor:', error);
+      throw new InternalServerErrorException('Failed to create tutor');
     }
-
-    return {
-      verificationStatus: tutor.verificationStatus,
-      backgroundCheckStatus: tutor.backgroundCheckStatus,
-      documentVerified: tutor.documentVerified,
-      interviewScheduled: tutor.interviewScheduled,
-      isVerified: tutor.isVerified,
-      rejectionReason: tutor.rejectionReason || undefined,
-      pendingStep,
-    };
   }
 
-  /**
-   * Creates verification details for a tutor.
-   * The tutor profile must exist.
-   * Throws a ConflictException if verification details already exist for the tutor.
-   * @param tutorId The ID of the tutor (which is also the userId).
-   * @param createVerificationDetailsDto DTO containing verification details.
-   * @returns The created verification details.
-   */
-  async createVerificationDetails(
-    tutorId: number,
-    createVerificationDetailsDto: CreateVerificationDetailsDto,
-  ): Promise<VerificationDetails> {
-    // 1. Check if the tutor profile exists (tutorId is the userId)
-    const tutorProfile = await this.database.query.tutors.findFirst({
-      where: eq(tutorSchema.tutors.tutorId, tutorId),
-    });
-    if (!tutorProfile) {
-      throw new NotFoundException(
-        `Tutor profile not found for user ID ${tutorId}. Cannot create verification details.`,
-      );
-    }
-
-    // 2. Check if verification details already exist for this tutor
-    const existingDetails =
-      await this.database.query.verificationDetails.findFirst({
-        where: eq(tutorSchema.verificationDetails.tutorId, tutorId),
-      });
-    if (existingDetails) {
-      throw new ConflictException(
-        `Verification details already exist for tutor ID ${tutorId}.`,
-      );
-    }
-
-    // 3. Create the verification details
+  async update(id: number, updateTutorDto: any) {
     try {
-      const [newDetails] = await this.database
-        .insert(tutorSchema.verificationDetails)
-        .values({
-          tutorId: tutorId,
-          documentUpload: createVerificationDetailsDto.documentUpload, // Corrected
-          cvUpload: createVerificationDetailsDto.cvUpload, // Corrected
-          kebeleIdUpload: createVerificationDetailsDto.kebeleIdUpload, // Corrected
-          nationalIdUpload: createVerificationDetailsDto.nationalIdUpload, // Corrected
-          fanNumber: createVerificationDetailsDto.fanNumber,
-          // verificationDate and isVerified are handled by database defaults or later updates
-        })
+      // Check if tutor exists
+      await this.findOne(id);
+
+      const [updatedTutor] = await this.db
+        .update(tutorSchema.tutors)
+        .set({ ...updateTutorDto, updatedAt: new Date() })
+        .where(eq(tutorSchema.tutors.tutorId, id))
         .returning();
 
-      if (!newDetails) {
-        throw new InternalServerErrorException(
-          'Failed to create verification details after insert.',
-        );
-      }
-      return newDetails;
+      return updatedTutor;
     } catch (error) {
-      console.error(
-        `Error creating verification details for tutor ID ${tutorId}:`,
-        error,
-      );
-      throw new InternalServerErrorException(
-        'Could not create verification details.',
-      );
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error updating tutor ${id}:`, error);
+      throw new InternalServerErrorException(`Failed to update tutor ${id}`);
     }
   }
 
-  /**
-   * Retrieves verification details for a tutor by their user ID.
-   * @param tutorId The ID of the tutor (which is also the userId).
-   * @returns The verification details.
-   */
-  async getVerificationDetails(tutorId: number): Promise<VerificationDetails> {
-    const details = await this.database.query.verificationDetails.findFirst({
-      where: eq(tutorSchema.verificationDetails.tutorId, tutorId),
-    });
+  async remove(id: number) {
+    try {
+      // Check if tutor exists
+      await this.findOne(id);
 
-    if (!details) {
-      throw new NotFoundException(
-        `Verification details not found for tutor ID ${tutorId}.`,
-      );
+      await this.db
+        .delete(tutorSchema.tutors)
+        .where(eq(tutorSchema.tutors.tutorId, id));
+
+      return { message: `Tutor with ID ${id} deleted successfully` };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error deleting tutor ${id}:`, error);
+      throw new InternalServerErrorException(`Failed to delete tutor ${id}`);
     }
-    return details;
   }
 
-  /**
-   * Create a new availability slot for a tutor.
-   */
-  async createAvailabilitySlot(
-    tutorId: number,
-    dto: TutorAvailabilitySlot,
-  ): Promise<TutorAvailabilitySlot> {
-    // First check if the tutor profile exists
-    const tutorProfile = await this.database.query.tutors.findFirst({
-      where: eq(tutorSchema.tutors.tutorId, tutorId),
-    });
+  // Subjects Management
+  async addSubjects(tutorId: number, subjects: AddSubjectDto[]) {
+    try {
+      if (!subjects || subjects.length === 0) {
+        throw new NotFoundException('No subjects provided');
+      }
 
-    if (!tutorProfile) {
-      throw new NotFoundException(
-        `Tutor profile not found for user ID ${tutorId}. Create a tutor profile first.`,
-      );
+      const newSubjects: tutorSchema.TutorSubject[] = [];
+
+      for (const subject of subjects) {
+        // Each subject must have a name based on our updated DTO
+        if (!subject.subjectName) {
+          throw new Error('Subject name is required');
+        }
+
+        // Store the subject with the tutor ID and subject name
+        const result = await this.db
+          .insert(tutorSchema.tutorSubjects)
+          .values({
+            tutorId,
+            subjectName: subject.subjectName,
+          })
+          .returning();
+        
+        if (result && result.length > 0 && result[0]) {
+          // Type assertion to fix TypeScript error
+          const subjectToAdd = result[0] as tutorSchema.TutorSubject;
+          newSubjects.push(subjectToAdd);
+        }
+      }
+      
+      return newSubjects;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error adding subjects for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to add subjects for tutor ${tutorId}`);
     }
-
-    // Convert dayOfWeek to array if it's not already
-    const daysOfWeek = Array.isArray(dto.dayOfWeek)
-      ? dto.dayOfWeek
-      : [dto.dayOfWeek];
-
-    const [slot] = await this.database
-      .insert(tutorSchema.tutorAvailabilitySlots)
-      .values({
-        tutorId,
-        dayOfWeek: daysOfWeek,
-        startTime: dto.startTime,
-        endTime: dto.endTime,
-      })
-      .returning();
-
-    if (!slot) throw new InternalServerErrorException('Failed to create slot');
-    return slot;
   }
-
-  /**
-   * Get all availability slots for a tutor.
-   */
-  async getAvailabilitySlots(
-    tutorId: number,
-  ): Promise<TutorAvailabilitySlot[]> {
-    return this.database.query.tutorAvailabilitySlots.findMany({
-      where: eq(tutorSchema.tutorAvailabilitySlots.tutorId, tutorId),
-    });
-  }
-
-  /**
-   * Update an availability slot by id (only if it belongs to the tutor).
-   */
-  async updateAvailabilitySlot(
-    tutorId: number,
-    slotId: number,
-    dto: TutorAvailabilitySlot,
-  ): Promise<TutorAvailabilitySlot> {
-    // Ensure slot belongs to tutor
-    const slot = await this.database.query.tutorAvailabilitySlots.findFirst({
-      where: eq(tutorSchema.tutorAvailabilitySlots.id, slotId),
-    });
-    if (!slot || slot.tutorId !== tutorId) {
-      throw new NotFoundException('Slot not found or not owned by tutor');
+  
+  async getSubjects(tutorId: number) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      return await this.db
+        .select()
+        .from(tutorSchema.tutorSubjects)
+        .where(eq(tutorSchema.tutorSubjects.tutorId, tutorId));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error fetching subjects for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to fetch subjects for tutor ${tutorId}`);
     }
-
-    // Prepare update data
-    const updateData: Partial<
-      typeof tutorSchema.tutorAvailabilitySlots.$inferInsert
-    > = {};
-
-    if (dto.startTime) updateData.startTime = dto.startTime;
-    if (dto.endTime) updateData.endTime = dto.endTime;
-    if (dto.dayOfWeek) {
-      updateData.dayOfWeek = Array.isArray(dto.dayOfWeek)
-        ? dto.dayOfWeek
-        : [dto.dayOfWeek];
-    }
-
-    const [updated] = await this.database
-      .update(tutorSchema.tutorAvailabilitySlots)
-      .set(updateData)
-      .where(eq(tutorSchema.tutorAvailabilitySlots.id, slotId))
-      .returning();
-
-    if (!updated)
-      throw new InternalServerErrorException('Failed to update slot');
-    return updated;
   }
+  
+  // Grades Management
+  async addGrades(tutorId: number, grades: { gradeLevelName: string }[]) {
+    try {
+      if (!grades || grades.length === 0) {
+        throw new NotFoundException('No grade levels provided');
+      }
 
-  /**
-   * Delete an availability slot by id (only if it belongs to the tutor).
-   */
-  async deleteAvailabilitySlot(tutorId: number, slotId: number): Promise<void> {
-    const slot = await this.database.query.tutorAvailabilitySlots.findFirst({
-      where: eq(tutorSchema.tutorAvailabilitySlots.id, slotId),
-    });
-    if (!slot || slot.tutorId !== tutorId) {
-      throw new NotFoundException('Slot not found or not owned by tutor');
+      const newGrades: tutorSchema.TutorGrade[] = [];
+
+      for (const grade of grades) {
+        // Each grade must have a name based on our updated DTO
+        if (!grade.gradeLevelName) {
+          throw new Error('Grade level name is required');
+        }
+
+        // Store the grade level with the tutor ID and grade level name
+        const result = await this.db
+          .insert(tutorSchema.tutorGrades)
+          .values({
+            tutorId,
+            gradeName: grade.gradeLevelName,
+          })
+          .returning();
+        
+        if (result && result.length > 0 && result[0]) {
+          // Type assertion to fix TypeScript error
+          const gradeToAdd = result[0] as tutorSchema.TutorGrade;
+          newGrades.push(gradeToAdd);
+        }
+      }
+      
+      return newGrades;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error adding grades for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to add grades for tutor ${tutorId}`);
     }
-    await this.database
-      .delete(tutorSchema.tutorAvailabilitySlots)
-      .where(eq(tutorSchema.tutorAvailabilitySlots.id, slotId));
   }
-}
+  
+  async getGrades(tutorId: number) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      return await this.db
+        .select()
+        .from(tutorSchema.tutorGrades)
+        .where(eq(tutorSchema.tutorGrades.tutorId, tutorId));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error fetching grades for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to fetch grades for tutor ${tutorId}`);
+    }
+  }
+  
+  // Availability Management
+  async addAvailability(tutorId: number, slots: { dayOfWeek: string, startTime: Date, endTime: Date }[]) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      const insertedSlots: tutorSchema.TutorAvailabilitySlot[] = [];
+      
+      // Insert each availability slot
+      for (const slot of slots) {
+        const [newSlot] = await this.db
+          .insert(tutorSchema.tutorAvailability)
+          .values({
+            tutorId,
+            dayOfWeek: slot.dayOfWeek,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+          })
+          .returning();
+          
+        if (newSlot) {
+          insertedSlots.push(newSlot);
+        }
+      }
+      
+      return insertedSlots;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error adding availability for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to add availability for tutor ${tutorId}`);
+    }
+  }
+  
+  async getAvailability(tutorId: number) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      return await this.db
+        .select()
+        .from(tutorSchema.tutorAvailability)
+        .where(eq(tutorSchema.tutorAvailability.tutorId, tutorId));
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error fetching availability for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to fetch availability for tutor ${tutorId}`);
+    }
+  }
+  
+  // Verification Management
+  async addVerification(tutorId: number, verificationData: Partial<tutorSchema.NewTutorVerification>) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      // Check if verification already exists
+      const existingVerification = await this.db
+        .select()
+        .from(tutorSchema.tutorVerifications)
+        .where(eq(tutorSchema.tutorVerifications.tutorId, tutorId))
+        .limit(1);
+        
+      if (existingVerification.length > 0) {
+        // Update existing verification
+        const [updatedVerification] = await this.db
+          .update(tutorSchema.tutorVerifications)
+          .set({
+            ...verificationData,
+            updatedAt: new Date(),
+          })
+          .where(eq(tutorSchema.tutorVerifications.tutorId, tutorId))
+          .returning();
+          
+        return updatedVerification;
+      } else {
+        // Create new verification
+        const [newVerification] = await this.db
+          .insert(tutorSchema.tutorVerifications)
+          .values({
+            tutorId,
+            ...verificationData,
+          })
+          .returning();
+          
+        return newVerification;
+      }
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error managing verification for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to manage verification for tutor ${tutorId}`);
+    }
+  }
+  
+  async getVerification(tutorId: number) {
+    try {
+      // Check if tutor exists
+      await this.findOne(tutorId);
+      
+      const verification = await this.db
+        .select()
+        .from(tutorSchema.tutorVerifications)
+        .where(eq(tutorSchema.tutorVerifications.tutorId, tutorId))
+        .limit(1);
+        
+      if (verification.length === 0) {
+        return null; // No verification data yet
+      }
+      
+      return verification[0];
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error fetching verification for tutor ${tutorId}:`, error);
+      throw new InternalServerErrorException(`Failed to fetch verification for tutor ${tutorId}`);
+    }
+  }
+} 

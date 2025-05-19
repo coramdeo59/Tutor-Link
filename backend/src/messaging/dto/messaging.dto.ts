@@ -9,7 +9,6 @@ import {
   IsDateString,
   Min,
   Max,
-  IsUrl,
   ArrayMinSize,
 } from 'class-validator';
 
@@ -53,19 +52,23 @@ export class SendMessageDto {
 }
 
 export class MessageAttachmentDto {
-  @IsUrl()
-  url: string;
-
   @IsString()
-  type: string;
+  @IsOptional()
+  url?: string;
 
   @IsString()
   @IsOptional()
-  name?: string;
+  filePath?: string;
+  
+  @IsString()
+  fileType: string;
+
+  @IsString()
+  fileName: string;
 
   @IsInt()
   @IsOptional()
-  size?: number;
+  fileSize?: number;
 }
 
 /**
@@ -80,7 +83,7 @@ export class ConversationParticipantDto {
 
   @IsString()
   @IsOptional()
-  profilePictureUrl?: string;
+  profilePictureUrl?: string | null;
   
   @IsBoolean()
   isAdmin: boolean;
@@ -108,7 +111,7 @@ export class MessageDto {
 
   @IsString()
   @IsOptional()
-  senderProfilePictureUrl?: string;
+  senderProfilePictureUrl?: string | null;
 
   @IsInt()
   conversationId: number;

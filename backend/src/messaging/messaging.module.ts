@@ -3,7 +3,6 @@
 // import { ConfigModule, ConfigService } from '@nestjs/config';
 // import { MessagingService } from './messaging.service';
 // import { MessagingController } from './messaging.controller';
-// import { MessagingGateway } from './messaging.gateway';
 // import { CoreModule } from '../core/core.module';
 
 // @Module({
@@ -21,7 +20,7 @@
 //     }),
 //   ],
 //   controllers: [MessagingController],
-//   providers: [MessagingService, MessagingGateway],
+//   providers: [MessagingService],
 //   exports: [MessagingService],
 // })
 // export class MessagingModule {} 
