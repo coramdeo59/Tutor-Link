@@ -1,0 +1,59 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { TutorDashboardService, TutoringSession } from '@/services/tutor-dashboard.service';
+import { format, addHours } from 'date-fns';
+import { Calendar, Clock, ArrowLeft, Check, X, Plus, User, BookOpen, GraduationCap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import axios from 'axios';
+
+// Define interfaces for reference data
+interface Subject {
+  id: number;
+  name: string;
+}
+
+interface GradeLevel {
+  id: number;
+  name: string;
+}
+
+interface Student {
+  id: number;
+  name: string;
+  gradeLevel?: string;
+}
+
+// New session form data interface
+interface SessionFormData {
+  childId: number;
+  subjectId: number;
+  title: string;
+  startTime: string;
+  endTime: string;
+  status: 'scheduled' | 'confirmed';
+  notes?: string;
+}

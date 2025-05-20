@@ -10,20 +10,23 @@ import { ChildModule } from './users/child/child.module';
 import { AdminModule } from './users/admin/admin.module';
 import { MailerModule } from './mailer/mailer.module';
 import { PaymentModule } from './payment/payment.module';
-import { SchedulerModule } from './scheduler/scheduler.module';
+import { SubjectsGradeModule } from './subjectAndGrade/subjectsGrade.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     CoreModule,
+    SubjectsGradeModule,
     ParentModule,
     TutorsModule,
     ChildModule,
     AdminModule,
     PaymentModule,
     MailerModule,
-    SchedulerModule,
+    CloudinaryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

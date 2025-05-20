@@ -1,8 +1,8 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/auth/login/page": "app/auth/login/page.js",
-  "/auth/register/page": "app/auth/register/page.js",
   "/(dashboard)/parent-dashboard/page": "app/(dashboard)/parent-dashboard/page.js",
-  "/(dashboard)/parent-dashboard/children-management/page": "app/(dashboard)/parent-dashboard/children-management/page.js",
-  "/(dashboard)/parent-dashboard/session-management/page": "app/(dashboard)/parent-dashboard/session-management/page.js"
+  "/(dashboard)/tutor-dashboard/page": "app/(dashboard)/tutor-dashboard/page.js",
+  "/(dashboard)/tutor-dashboard/students/page": "app/(dashboard)/tutor-dashboard/students/page.js",
+  "/(dashboard)/tutor-dashboard/sessions/page": "app/(dashboard)/tutor-dashboard/sessions/page.js"
 }

@@ -1,0 +1,206 @@
+  // -------------------- ASSIGNMENTS METHODS --------------------
+  
+  /**
+   * Get all assignments for a child
+   */
+  async getAssignments(childId: number): Promise<any[]> {
+    try {
+      // Fetch assignments assigned to this child
+      const assignments = await this.db.query.assignments.findMany({
+        where: eq(this.db.assignments.childId, childId),
+        orderBy: [desc(this.db.assignments.dueDate)]
+      });
+      
+      return assignments;
+    } catch (error) {
+      console.error('Error fetching assignments for child:', error);
+      throw new InternalServerErrorException('Failed to fetch assignments');
+    }
+  }
+
+  /**
+   * Get a specific assignment for a child
+   */
+  async getAssignment(childId: number, assignmentId: number): Promise<any> {
+    try {
+      const assignment = await this.db.query.assignments.findFirst({
+        where: and(
+          eq(this.db.assignments.assignmentId, assignmentId),
+          eq(this.db.assignments.childId, childId)
+        )
+      });
+
+      if (!assignment) {
+        throw new NotFoundException(`Assignment ${assignmentId} not found or not assigned to this child`);
+      }
+
+      return assignment;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error fetching assignment:', error);
+      throw new InternalServerErrorException('Failed to fetch assignment');
+    }
+  }
+
+  /**
+   * Submit an assignment
+   */
+  async submitAssignment(childId: number, submitDto: any): Promise<any> {
+    try {
+      // First, verify that the assignment exists and is assigned to this child
+      const assignment = await this.getAssignment(childId, submitDto.assignmentId);
+      
+      // Check if the assignment is already submitted
+      const existingSubmission = await this.db.query.submissions.findFirst({
+        where: and(
+          eq(this.db.submissions.assignmentId, submitDto.assignmentId),
+          eq(this.db.submissions.childId, childId)
+        )
+      });
+
+      let submission;
+      const now = new Date();
+      
+      // If a submission already exists, update it
+      if (existingSubmission) {
+        submission = await this.db.update(this.db.submissions)
+          .set({
+            content: submitDto.content,
+            comment: submitDto.comment || null,
+            fileUrl: submitDto.fileUrl || null,
+            status: 'submitted',
+            updatedAt: now
+          })
+          .where(eq(this.db.submissions.submissionId, existingSubmission.submissionId))
+          .returning();
+      } else {
+        // Create a new submission
+        submission = await this.db.insert(this.db.submissions)
+          .values({
+            assignmentId: submitDto.assignmentId,
+            childId: childId,
+            content: submitDto.content,
+            comment: submitDto.comment || null,
+            fileUrl: submitDto.fileUrl || null,
+            status: 'submitted',
+            createdAt: now,
+            updatedAt: now
+          })
+          .returning();
+      }
+
+      return submission[0];
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      throw new InternalServerErrorException('Failed to submit assignment');
+    }
+  }
+
+  // -------------------- TUTORING SESSIONS METHODS --------------------
+
+  /**
+   * Get all tutoring sessions for a child
+   */
+  async getTutoringSessions(childId: number): Promise<any[]> {
+    try {
+      const sessions = await this.db.query.tutoringSessions.findMany({
+        where: eq(this.db.tutoringSessions.childId, childId),
+        orderBy: [desc(this.db.tutoringSessions.startTime)]
+      });
+      
+      return sessions;
+    } catch (error) {
+      console.error('Error fetching tutoring sessions for child:', error);
+      throw new InternalServerErrorException('Failed to fetch tutoring sessions');
+    }
+  }
+
+  /**
+   * Request a new tutoring session
+   */
+  async requestTutoringSession(childId: number, requestDto: any): Promise<any> {
+    try {
+      // Validate that the time makes sense
+      const startTime = new Date(requestDto.requestedStartTime);
+      const endTime = new Date(requestDto.requestedEndTime);
+      
+      if (startTime >= endTime) {
+        throw new BadRequestException('End time must be after start time');
+      }
+      
+      // Calculate duration in minutes
+      const durationMinutes = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      const now = new Date();
+      
+      // Create the session request
+      const session = await this.db.insert(this.db.tutoringSessions)
+        .values({
+          tutorId: requestDto.tutorId,
+          childId: childId,
+          subjectId: requestDto.subjectId,
+          title: 'Session Request',
+          notes: requestDto.notes || null,
+          status: 'requested', // Special status for requested sessions
+          startTime: startTime,
+          endTime: endTime,
+          durationMinutes: durationMinutes,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+      
+      return session[0];
+    } catch (error) {
+      console.error('Error requesting tutoring session:', error);
+      throw new InternalServerErrorException('Failed to request tutoring session');
+    }
+  }
+
+  /**
+   * Get a specific tutoring session
+   */
+  async getTutoringSession(childId: number, sessionId: number): Promise<any> {
+    try {
+      const session = await this.db.query.tutoringSessions.findFirst({
+        where: and(
+          eq(this.db.tutoringSessions.sessionId, sessionId),
+          eq(this.db.tutoringSessions.childId, childId)
+        )
+      });
+
+      if (!session) {
+        throw new NotFoundException(`Session ${sessionId} not found or not associated with this child`);
+      }
+
+      return session;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error fetching tutoring session:', error);
+      throw new InternalServerErrorException('Failed to fetch tutoring session');
+    }
+  }
+
+  // -------------------- FEEDBACK METHODS --------------------
+
+  /**
+   * Get all feedback for a child
+   */
+  async getFeedback(childId: number): Promise<any[]> {
+    try {
+      // This would come from feedback table - simplified for now
+      const feedback = await this.db.query.tutorFeedback.findMany({
+        where: eq(this.db.tutorFeedback.childId, childId),
+        orderBy: [desc(this.db.tutorFeedback.createdAt)]
+      });
+      
+      return feedback;
+    } catch (error) {
+      console.error('Error fetching feedback for child:', error);
+      throw new InternalServerErrorException('Failed to fetch feedback');
+    }
+  }

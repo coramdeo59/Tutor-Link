@@ -1,0 +1,211 @@
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Put, 
+  Delete, 
+  Body, 
+  Param, 
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  BadRequestException
+} from '@nestjs/common';
+import { ParentService } from './parent.service';
+import { AccessTokenGuard } from '../../auth/authentication/guards/access-token/access-token.guard';
+import { RolesGuard } from '../../auth/authentication/guards/roles/roles.guard';
+import { Roles } from '../../auth/authentication/decorators/roles.decorator';
+import { Role } from '../enums/role.enum';
+import { ActiveUser } from '../../auth/authentication/decorators/active-user.decorator';
+import { ActiveUserData } from '../../auth/interfaces/active-user.data.interface';
+import { ProvideFeedbackDto } from './dto/provide-feedback.dto';
+import { RequestSessionDto } from './dto/request-session.dto';
+
+@Controller('users/parent')
+@UseGuards(AccessTokenGuard, RolesGuard)
+export class ParentController {
+  constructor(private readonly parentService: ParentService) {}
+
+  // -------------------- BASIC PARENT ENDPOINTS --------------------
+
+  @Get()
+  @Roles(Role.ADMIN)
+  async findAll() {
+    return this.parentService.findAll();
+  }
+
+  @Get(':id')
+  @Roles(Role.PARENT, Role.ADMIN)
+  async findOne(@Param('id', ParseIntPipe) id: number, @ActiveUser() user: ActiveUserData) {
+    // For parents, only allow them to view their own profile
+    if (user.role === Role.PARENT && user.sub !== id.toString()) {
+      throw new BadRequestException('You can only view your own profile');
+    }
+    return this.parentService.findOne(id);
+  }
+
+  @Post()
+  @Roles(Role.ADMIN)
+  async create(@Body() createParentDto: any) {
+    return this.parentService.create(createParentDto);
+  }
+
+  @Put(':id')
+  @Roles(Role.PARENT, Role.ADMIN)
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateParentDto: any,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // For parents, only allow them to update their own profile
+    if (user.role === Role.PARENT && user.sub !== id.toString()) {
+      throw new BadRequestException('You can only update your own profile');
+    }
+    return this.parentService.update(id, updateParentDto);
+  }
+
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return this.parentService.remove(id);
+  }
+
+  // -------------------- CHILD MANAGEMENT ENDPOINTS --------------------
+
+  /**
+   * Get dashboard data for parent's children
+   */
+  @Get(':id/dashboard/children')
+  @Roles(Role.PARENT, Role.ADMIN)
+  async getChildrenDashboard(
+    @Param('id', ParseIntPipe) id: number,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // For parents, only allow them to view their own children
+    if (user.role === Role.PARENT && user.sub !== id.toString()) {
+      throw new BadRequestException('You can only view your own children');
+    }
+    // This should be implemented based on your dashboard requirements
+    return this.parentService.getChildrenDashboardData(id);
+  }
+
+  // -------------------- FEEDBACK ENDPOINTS --------------------
+
+  /**
+   * Get all feedback provided by a parent for their children
+   */
+  @Get(':id/feedback')
+  @Roles(Role.PARENT)
+  async getFeedback(
+    @Param('id', ParseIntPipe) id: number,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only access their own feedback
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only access your own feedback');
+    }
+    
+    return this.parentService.getFeedback(id);
+  }
+
+  /**
+   * Provide feedback for a tutor related to one of the parent's children
+   */
+  @Post(':id/feedback')
+  @Roles(Role.PARENT)
+  async provideFeedback(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() feedbackDto: ProvideFeedbackDto,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only provide feedback for their own children
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only provide feedback for your own children');
+    }
+    
+    // The child ID should be included in the feedbackDto or as a separate parameter
+    const childId = feedbackDto.childId;
+    if (!childId) {
+      throw new BadRequestException('Child ID is required');
+    }
+    
+    return this.parentService.provideFeedback(id, childId, feedbackDto);
+  }
+
+  // -------------------- SESSIONS ENDPOINTS --------------------
+
+  /**
+   * Get all tutoring sessions for children of a parent
+   */
+  @Get(':id/sessions')
+  @Roles(Role.PARENT)
+  async getSessions(
+    @Param('id', ParseIntPipe) id: number,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only access their own children's sessions
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only access sessions for your own children');
+    }
+    
+    return this.parentService.getChildrenSessions(id);
+  }
+
+  /**
+   * Request a tutoring session on behalf of a child
+   */
+  @Post(':id/sessions/request')
+  @Roles(Role.PARENT)
+  async requestSession(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() requestDto: RequestSessionDto,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only request sessions for their own children
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only request sessions for your own children');
+    }
+    
+    return this.parentService.requestTutoringSession(id, requestDto.childId, requestDto);
+  }
+
+  // -------------------- ASSIGNMENTS ENDPOINTS --------------------
+
+  /**
+   * Get all assignments for children of a parent
+   */
+  @Get(':id/assignments')
+  @Roles(Role.PARENT)
+  async getAssignments(
+    @Param('id', ParseIntPipe) id: number,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only access their own children's assignments
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only access assignments for your own children');
+    }
+    
+    return this.parentService.getChildrenAssignments(id);
+  }
+
+  /**
+   * Get a specific assignment for a child of a parent
+   */
+  @Get(':id/children/:childId/assignments/:assignmentId')
+  @Roles(Role.PARENT)
+  async getChildAssignment(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('childId', ParseIntPipe) childId: number,
+    @Param('assignmentId', ParseIntPipe) assignmentId: number,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    // Ensure the parent can only access their own children's assignments
+    if (user.sub !== id.toString()) {
+      throw new BadRequestException('You can only access assignments for your own children');
+    }
+    
+    return this.parentService.getChildAssignment(id, childId, assignmentId);
+  }
+}

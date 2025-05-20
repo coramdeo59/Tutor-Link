@@ -34,6 +34,10 @@ export class ChildService {
     private readonly db: NodePgDatabase<{
       children: typeof parentSchema.children;
       parents: typeof parentSchema.parents;
+      // Include schema for assignments and sessions
+      assignments: any;
+      submissions: any;
+      tutoringSessions: any;
     }>,
   ) {}
 

@@ -13,6 +13,7 @@ import { RefreshTokenIdsStorage } from "./authentication/refresh-token-ids.stora
 import { CoreModule } from "src/core/core.module";
 import { AuthorizationModule } from "./authorization/authorization.module";
 import { MailerModule } from "../mailer/mailer.module";
+import { GuardModule } from "./authentication/guards/guard.module";
 
 @Module({
 	imports: [
@@ -21,6 +22,7 @@ import { MailerModule } from "../mailer/mailer.module";
 		ConfigModule.forFeature(jwtConfig),
 		AuthorizationModule,
 		MailerModule,
+		GuardModule,
 	],
 	providers: [
 		{ provide: HashingService, useClass: BcryptService },
@@ -28,11 +30,10 @@ import { MailerModule } from "../mailer/mailer.module";
 			provide: APP_GUARD,
 			useClass: AccessTokenGuard,
 		},
-		AccessTokenGuard,
 		RefreshTokenIdsStorage,
 		AuthenticationService,
 	],
 	controllers: [AuthenticationController, PasswordResetController],
-	exports: [HashingService, AuthenticationService],
+	exports: [HashingService, AuthenticationService, JwtModule, ConfigModule],
 })
 export class AuthModule {}

@@ -57,9 +57,8 @@ import databaseConfig from '../config/databse-config';
             tutorGrades: require('../users/tutors/schema/tutor.schema').tutorGrades,
             tutorAvailability: require('../users/tutors/schema/tutor.schema').tutorAvailability,
             tutorVerifications: require('../users/tutors/schema/tutor.schema').tutorVerifications,
-            // Scheduler module schema
-            tutoringSessions: require('../scheduler/schema/scheduler.schema').tutoringSessions,
-            tutorUnavailableDates: require('../scheduler/schema/scheduler.schema').tutorUnavailableDates,
+            // Sessions are now handled in the tutors module
+            tutoringSessions: require('../users/tutors/sessions/schema/sessions.schema').tutoringSessions,
           },
         });
       },

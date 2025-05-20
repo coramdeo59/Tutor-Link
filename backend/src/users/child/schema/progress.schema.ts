@@ -39,7 +39,7 @@ export const childSubjects = pgTable('child_subjects', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// Reference to existing sessions table - renamed to avoid conflicts
+// Child tutoring sessions table - use a different name to avoid conflicts
 export const sessions = pgTable('child_tutoring_sessions', {
   sessionId: serial('session_id').primaryKey(),
   childId: integer('child_id')

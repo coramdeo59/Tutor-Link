@@ -56,21 +56,30 @@ export class ChildProgressDto {
 export class AssessmentDto {
   @IsInt()
   assessmentId: number;
-
+  
+  @IsInt()
+  sessionId: number;
+  
+  @IsInt()
+  childId: number;
+  
+  @IsInt()
+  subjectId: number;
+  
+  @IsString()
+  subjectName: string;
+  
   @IsNumber()
   @Min(0)
   @Max(100)
-  score: number;
-
+  progressPercentage: number;
+  
   @IsDate()
-  date: Date;
-
-  @IsString()
-  tutorName: string;
-
+  assessmentDate: Date;
+  
   @IsString()
   @IsOptional()
-  notes?: string;
+  tutorNotes?: string;
 }
 
 /**

@@ -1,123 +1,421 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TutorDashboardService, TutorStats, TutoringSession, Assignment, Feedback } from '@/services/tutor-dashboard.service';
+import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Clock, BookOpen, Users } from 'lucide-react';
 
 export default function TutorDashboard() {
-  // Mock data - would be replaced with API calls in production
-  const [userData, setUserData] = useState({
-    name: 'John Davis',
-    subject: 'Mathematics',
-    rating: 4.9,
-    reviews: 52,
-    totalEarnings: 2450,
-    monthlyEarnings: 620,
-    upcomingSessions: 5,
-    totalHours: 48,
-    completedSessions: 24
+  const { user } = useAuth();
+  
+  // State for dashboard data
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<TutorStats>({
+    rating: 0,
+    reviews: 0,
+    totalEarnings: 0,
+    monthlyEarnings: 0,
+    upcomingSessions: 0,
+    totalHours: 0,
+    completedSessions: 0,
+    subjects: []
   });
+  
+  // State for different data types
+  const [upcomingSessions, setUpcomingSessions] = useState<TutoringSession[]>([]);
+  const [recentFeedback, setRecentFeedback] = useState<Feedback[]>([]);
+  const [recentAssignments, setRecentAssignments] = useState<Assignment[]>([]);
+  const [loadingDetail, setLoadingDetail] = useState({
+    sessions: true,
+    feedback: true,
+    assignments: true
+  });
+
+  // Fetch dashboard data when component mounts
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Use the calculateTutorStats method that computes stats from real session data
+        const tutorStats = await TutorDashboardService.calculateTutorStats();
+        setStats(tutorStats);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // Fetch sessions, feedback, and assignments data
+  useEffect(() => {
+    const fetchDetailData = async () => {
+      try {
+        // Fetch upcoming sessions
+        setLoadingDetail(prev => ({ ...prev, sessions: true }));
+        const sessions = await TutorDashboardService.getUpcomingSessions();
+        setUpcomingSessions(sessions);
+        setLoadingDetail(prev => ({ ...prev, sessions: false }));
+
+        // Fetch recent feedback
+        setLoadingDetail(prev => ({ ...prev, feedback: true }));
+        const feedback = await TutorDashboardService.getRecentFeedback();
+        setRecentFeedback(feedback);
+        setLoadingDetail(prev => ({ ...prev, feedback: false }));
+
+        // Fetch recent assignments
+        setLoadingDetail(prev => ({ ...prev, assignments: true }));
+        const assignments = await TutorDashboardService.getRecentAssignments();
+        setRecentAssignments(assignments);
+        setLoadingDetail(prev => ({ ...prev, assignments: false }));
+      } catch (err) {
+        console.error('Error fetching detail data:', err);
+        setLoadingDetail({
+          sessions: false,
+          feedback: false,
+          assignments: false
+        });
+      }
+    };
+
+    fetchDetailData();
+  }, []);
+
+  // Helper function to format date
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy');
+    } catch (err) {
+      return dateString;
+    }
+  };
+
+  // Helper function to format time
+  const formatTime = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'h:mm a');
+    } catch (err) {
+      return dateString;
+    }
+  };
+
+  // Helper function to get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'completed':
+        return 'bg-purple-100 text-purple-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'pending':
+        return 'bg-gray-100 text-gray-800';
+      case 'submitted':
+        return 'bg-blue-100 text-blue-800';
+      case 'graded':
+        return 'bg-green-100 text-green-800';
+      case 'late':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 max-w-7xl">
       <h1 className="text-2xl font-bold mb-6">Tutor Dashboard</h1>
       
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6" role="alert">
+          <p>{error}</p>
+        </div>
+      )}
+      
       {/* Welcome Banner */}
-      <div className="bg-yellow-100 p-4 rounded-lg mb-6">
-        <div className="flex justify-between items-center">
+      <div className="bg-amber-100 p-4 rounded-lg mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h2 className="font-medium text-lg">Welcome back, {userData.name}!</h2>
-            <p className="text-sm text-gray-600">You have {userData.upcomingSessions} upcoming sessions this week</p>
+            <h2 className="font-medium text-lg">Welcome back, {user?.firstName || 'Tutor'}!</h2>
+            <p className="text-sm text-gray-600">
+              You have {loading ? '...' : stats.upcomingSessions} upcoming sessions this week
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="default" className="bg-yellow-600 hover:bg-yellow-700">
-              Schedule Open Hours
+            <Button variant="default" className="bg-amber-600 hover:bg-amber-700">
+              Schedule Hours
             </Button>
-            <Button variant="outline" className="bg-white">
-              View Calendar
+            <Button variant="outline" className="bg-white" asChild>
+              <Link href="/tutor-dashboard/sessions">View Sessions</Link>
             </Button>
           </div>
         </div>
       </div>
       
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Rating</p>
-                <h3 className="text-2xl font-bold">{userData.rating}</h3>
-                <p className="text-xs text-gray-500">{userData.reviews} reviews</p>
-              </div>
-              <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                </svg>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Rating</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-10 w-20 mb-2" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.rating}/5</div>
+                <p className="text-xs text-gray-500">From {stats.reviews} reviews</p>
+              </>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Earnings (Month)</p>
-                <h3 className="text-2xl font-bold">${userData.monthlyEarnings}</h3>
-                <p className="text-xs text-gray-500">${userData.totalEarnings} total</p>
-              </div>
-              <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-                </svg>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Total Earnings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-10 w-20 mb-2" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">${stats.totalEarnings}</div>
+                <p className="text-xs text-gray-500">${stats.monthlyEarnings} this month</p>
+              </>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Hours Taught</p>
-                <h3 className="text-2xl font-bold">{userData.totalHours}</h3>
-                <p className="text-xs text-gray-500">{userData.completedSessions} sessions</p>
-              </div>
-              <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-10 w-20 mb-2" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.upcomingSessions} Upcoming</div>
+                <p className="text-xs text-gray-500">{stats.completedSessions} completed</p>
+              </>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Subject</p>
-                <h3 className="text-2xl font-bold">{userData.subject}</h3>
-                <p className="text-xs text-gray-500">Your specialty</p>
-              </div>
-              <div className="h-10 w-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
-                </svg>
-              </div>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Total Hours</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-10 w-20 mb-2" />
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.totalHours} hrs</div>
+                <Progress value={75} className="h-2" />
+                <p className="text-xs text-gray-500 mt-1">75% of your monthly goal</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
-      
-      {/* Upcoming Sessions Placeholder */}
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
-        <p className="text-gray-500">Your scheduled tutoring sessions will appear here.</p>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Button variant="outline" className="p-6 h-auto flex flex-col gap-2 items-center justify-center" asChild>
+          <Link href="/tutor-dashboard/assignments">
+            <BookOpen className="h-6 w-6 mb-2 text-amber-600" />
+            <span className="font-medium">Assignments</span>
+            <span className="text-sm text-gray-500">Create & manage assignments</span>
+          </Link>
+        </Button>
+        
+        <Button variant="outline" className="p-6 h-auto flex flex-col gap-2 items-center justify-center" asChild>
+          <Link href="/tutor-dashboard/sessions">
+            <Calendar className="h-6 w-6 mb-2 text-amber-600" />
+            <span className="font-medium">Sessions</span>
+            <span className="text-sm text-gray-500">Manage tutoring sessions</span>
+          </Link>
+        </Button>
+        
+        <Button variant="outline" className="p-6 h-auto flex flex-col gap-2 items-center justify-center" asChild>
+          <Link href="/tutor-dashboard/students">
+            <Users className="h-6 w-6 mb-2 text-amber-600" />
+            <span className="font-medium">Students</span>
+            <span className="text-sm text-gray-500">View & manage students</span>
+          </Link>
+        </Button>
+
+        <Button variant="outline" className="p-6 h-auto flex flex-col gap-2 items-center justify-center" asChild>
+          <Link href="/tutor-dashboard/availability">
+            <Clock className="h-6 w-6 mb-2 text-amber-600" />
+            <span className="font-medium">Availability</span>
+            <span className="text-sm text-gray-500">Set your teaching hours</span>
+          </Link>
+        </Button>
       </div>
+
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="upcoming" className="mb-6">
+        <TabsList className="mb-4">
+          <TabsTrigger value="upcoming">Upcoming Sessions</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="feedback">Feedback</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="upcoming">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upcoming Sessions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingDetail.sessions ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="mb-4">
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))
+              ) : upcomingSessions.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingSessions.map((session) => (
+                    <div key={session.sessionId} className="border rounded-lg p-4">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                        <h3 className="font-medium">{session.title}</h3>
+                        <Badge className={getStatusColor(session.status)}>{session.status}</Badge>
+                      </div>
+                      <p className="text-gray-600">Student: {session.childName || 'Unknown'}</p>
+                      <p className="text-gray-600">Subject: {session.subject || 'Various'}</p>
+                      <div className="flex items-center gap-4 mt-2 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(session.startTime)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {formatTime(session.startTime)} - {formatTime(session.endTime)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No upcoming sessions scheduled.</p>
+              )}
+
+              <div className="mt-4">
+                <Button variant="outline" asChild>
+                  <Link href="/tutor-dashboard/sessions">View All Sessions</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assignments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingDetail.assignments ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="mb-4">
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))
+              ) : recentAssignments.length > 0 ? (
+                <div className="space-y-4">
+                  {recentAssignments.map((assignment) => (
+                    <div key={assignment.assignmentId} className="border rounded-lg p-4">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                        <h3 className="font-medium">{assignment.title}</h3>
+                        <Badge className={getStatusColor(assignment.status)}>{assignment.status}</Badge>
+                      </div>
+                      <p className="text-gray-600">Student: {assignment.childName || 'Unknown'}</p>
+                      <p className="text-gray-600 line-clamp-2">{assignment.description}</p>
+                      <div className="flex items-center gap-1 mt-2 text-sm">
+                        <Calendar className="h-4 w-4" />
+                        Due: {formatDate(assignment.dueDate)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No assignments found.</p>
+              )}
+
+              <div className="mt-4">
+                <Button variant="outline" asChild>
+                  <Link href="/tutor-dashboard/assignments">View All Assignments</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="feedback">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Feedback</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingDetail.feedback ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="mb-4">
+                    <Skeleton className="h-6 w-48 mb-2" />
+                    <Skeleton className="h-4 w-64 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))
+              ) : recentFeedback.length > 0 ? (
+                <div className="space-y-4">
+                  {recentFeedback.map((feedback) => (
+                    <div key={feedback.feedbackId} className="border rounded-lg p-4">
+                      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2 mb-2">
+                        <h3 className="font-medium">{feedback.title}</h3>
+                        <Badge className="bg-gray-100 text-gray-800">{feedback.feedbackType}</Badge>
+                      </div>
+                      <p className="text-gray-600">From: {feedback.childName || 'Anonymous'}</p>
+                      <p className="text-gray-600 line-clamp-2">{feedback.content}</p>
+                      <div className="flex items-center gap-1 mt-2 text-sm">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(feedback.createdAt)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No feedback received yet.</p>
+              )}
+
+              <div className="mt-4">
+                <Button variant="outline" asChild>
+                  <Link href="/tutor-dashboard/feedback">View All Feedback</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

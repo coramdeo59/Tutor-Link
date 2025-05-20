@@ -1,0 +1,234 @@
+  // Update the constructor to include feedback, sessions, and assignments schemas
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: NodePgDatabase<{
+      parents: typeof parentSchema.parents;
+      children: typeof parentSchema.children;
+      tutorFeedback: any;
+      tutoringSessions: any;
+      assignments: any;
+    }>,
+  ) {}
+
+  // -------------------- FEEDBACK METHODS --------------------
+
+  /**
+   * Provide feedback for a tutor
+   */
+  async provideFeedback(parentId: number, childId: number, feedbackDto: any): Promise<any> {
+    try {
+      // Verify the child belongs to this parent
+      const child = await this.db.query.children.findFirst({
+        where: eq(parentSchema.children.childId, childId),
+      });
+
+      if (!child || child.parentId !== parentId) {
+        throw new NotFoundException('Child not found or not associated with this parent');
+      }
+
+      // Create the feedback
+      const now = new Date();
+      const feedback = await this.db.insert(this.db.tutorFeedback)
+        .values({
+          tutorId: feedbackDto.tutorId,
+          childId: childId,
+          title: feedbackDto.title,
+          content: feedbackDto.content,
+          feedbackType: feedbackDto.feedbackType,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+
+      return feedback[0];
+    } catch (error) {
+      console.error('Error providing feedback:', error);
+      throw new InternalServerErrorException('Failed to provide feedback');
+    }
+  }
+
+  /**
+   * Get all feedback provided by a parent for their children
+   */
+  async getFeedback(parentId: number): Promise<any[]> {
+    try {
+      // Get all children of this parent
+      const children = await this.db.query.children.findMany({
+        where: eq(parentSchema.children.parentId, parentId),
+        columns: {
+          childId: true
+        }
+      });
+
+      if (!children.length) {
+        return [];
+      }
+
+      const childIds = children.map(child => child.childId);
+
+      // Get all feedback for these children
+      const feedback = await this.db.query.tutorFeedback.findMany({
+        where: inArray(this.db.tutorFeedback.childId, childIds)
+      });
+
+      return feedback;
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      throw new InternalServerErrorException('Failed to fetch feedback');
+    }
+  }
+
+  // -------------------- SESSIONS METHODS --------------------
+
+  /**
+   * Get all tutoring sessions for children of a parent
+   */
+  async getChildrenSessions(parentId: number): Promise<any[]> {
+    try {
+      // Get all children of this parent
+      const children = await this.db.query.children.findMany({
+        where: eq(parentSchema.children.parentId, parentId),
+        columns: {
+          childId: true
+        }
+      });
+
+      if (!children.length) {
+        return [];
+      }
+
+      const childIds = children.map(child => child.childId);
+
+      // Get all sessions for these children
+      const sessions = await this.db.query.tutoringSessions.findMany({
+        where: inArray(this.db.tutoringSessions.childId, childIds),
+        orderBy: [desc(this.db.tutoringSessions.startTime)]
+      });
+
+      return sessions;
+    } catch (error) {
+      console.error('Error fetching tutoring sessions:', error);
+      throw new InternalServerErrorException('Failed to fetch tutoring sessions');
+    }
+  }
+
+  /**
+   * Request a tutoring session on behalf of a child
+   */
+  async requestTutoringSession(parentId: number, childId: number, requestDto: any): Promise<any> {
+    try {
+      // Verify the child belongs to this parent
+      const child = await this.db.query.children.findFirst({
+        where: eq(parentSchema.children.childId, childId),
+      });
+
+      if (!child || child.parentId !== parentId) {
+        throw new NotFoundException('Child not found or not associated with this parent');
+      }
+
+      // Validate that the time makes sense
+      const startTime = new Date(requestDto.requestedStartTime);
+      const endTime = new Date(requestDto.requestedEndTime);
+      
+      if (startTime >= endTime) {
+        throw new BadRequestException('End time must be after start time');
+      }
+      
+      // Calculate duration in minutes
+      const durationMinutes = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+      
+      const now = new Date();
+      
+      // Create the session request
+      const session = await this.db.insert(this.db.tutoringSessions)
+        .values({
+          tutorId: requestDto.tutorId,
+          childId: childId,
+          subjectId: requestDto.subjectId,
+          title: 'Parent Session Request',
+          notes: requestDto.notes || null,
+          status: 'requested', // Special status for requested sessions
+          startTime: startTime,
+          endTime: endTime,
+          durationMinutes: durationMinutes,
+          createdAt: now,
+          updatedAt: now
+        })
+        .returning();
+      
+      return session[0];
+    } catch (error) {
+      console.error('Error requesting tutoring session:', error);
+      throw new InternalServerErrorException('Failed to request tutoring session');
+    }
+  }
+
+  // -------------------- ASSIGNMENTS METHODS --------------------
+
+  /**
+   * Get all assignments for children of a parent
+   */
+  async getChildrenAssignments(parentId: number): Promise<any[]> {
+    try {
+      // Get all children of this parent
+      const children = await this.db.query.children.findMany({
+        where: eq(parentSchema.children.parentId, parentId),
+        columns: {
+          childId: true
+        }
+      });
+
+      if (!children.length) {
+        return [];
+      }
+
+      const childIds = children.map(child => child.childId);
+
+      // Get all assignments for these children
+      const assignments = await this.db.query.assignments.findMany({
+        where: inArray(this.db.assignments.childId, childIds),
+        orderBy: [desc(this.db.assignments.dueDate)]
+      });
+
+      return assignments;
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      throw new InternalServerErrorException('Failed to fetch assignments');
+    }
+  }
+
+  /**
+   * Get a specific assignment for a child of a parent
+   */
+  async getChildAssignment(parentId: number, childId: number, assignmentId: number): Promise<any> {
+    try {
+      // Verify the child belongs to this parent
+      const child = await this.db.query.children.findFirst({
+        where: eq(parentSchema.children.childId, childId),
+      });
+
+      if (!child || child.parentId !== parentId) {
+        throw new NotFoundException('Child not found or not associated with this parent');
+      }
+
+      // Get the assignment
+      const assignment = await this.db.query.assignments.findFirst({
+        where: and(
+          eq(this.db.assignments.assignmentId, assignmentId),
+          eq(this.db.assignments.childId, childId)
+        )
+      });
+
+      if (!assignment) {
+        throw new NotFoundException('Assignment not found or not assigned to this child');
+      }
+
+      return assignment;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error fetching assignment:', error);
+      throw new InternalServerErrorException('Failed to fetch assignment');
+    }
+  }

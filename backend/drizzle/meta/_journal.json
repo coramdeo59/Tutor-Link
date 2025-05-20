@@ -15,6 +15,13 @@
       "when": 1747708590060,
       "tag": "0001_wandering_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1747761908009,
+      "tag": "0002_known_paibok",
+      "breakpoints": true
     }
   ]
 }

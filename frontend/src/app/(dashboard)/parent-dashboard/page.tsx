@@ -19,7 +19,7 @@ const mockData = {
     upcomingSessions: 5
   },
   stats: {
-    children: { count: 2, names: "Emma & Jack" },
+    children: { count: 2, names: "Melkamu Elias" },
     tutors: { count: 3, description: "Across 4 subjects" },
     sessions: { count: 5, description: "Next: Today at 4 PM" },
     spending: { value: 320, formatted: "$320", description: "8 sessions this month" }
@@ -28,7 +28,7 @@ const mockData = {
     children: [
       {
         id: "1",
-        name: "Emma Smith",
+        name: "Melkamu Elias",
         age: 14,
         grade: "9th Grade",
         progress: 72,
@@ -36,7 +36,7 @@ const mockData = {
       },
       {
         id: "2",
-        name: "Jack Smith",
+        name: "Mekdes Tadesse",
         age: 10,
         grade: "5th Grade",
         progress: 85,
@@ -52,21 +52,21 @@ const mockData = {
     transactions: [
       {
         id: "1",
-        tutorName: "Mr. Johnson",
+        tutorName: "Mr. Diata",
         subject: "Mathematics",
         amount: 80,
         date: "2025-05-05"
       },
       {
         id: "2",
-        tutorName: "Ms. Williams",
+        tutorName: "Ms. Gizachew",
         subject: "Science",
         amount: 90,
         date: "2025-05-03"
       },
       {
         id: "3",
-        tutorName: "Mr. Davis",
+        tutorName: "Mr. Gemechis",
         subject: "English",
         amount: 80,
         date: "2025-04-28"
