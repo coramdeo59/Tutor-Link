@@ -1,1 +1,0 @@
-ALTER TABLE "payments" ADD COLUMN "tutoring_session_id" integer;

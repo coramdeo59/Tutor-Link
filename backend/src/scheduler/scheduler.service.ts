@@ -29,7 +29,6 @@ export class SchedulerService {
       children: typeof parentSchema.children;
       tutors: typeof tutorSchema.tutors;
     }>,
-    // private readonly paymentService: PaymentService, // Added for payment integration
   ) {}
 
   // ============ SESSION MANAGEMENT ============
@@ -137,7 +136,7 @@ export class SchedulerService {
         .values({
           tutorId: createSessionDto.tutorId,
           childId: createSessionDto.childId,
-          parentId: parentId,
+          // parentId: parentId,
           subjectId: createSessionDto.subjectId || null,
           subjectName: createSessionDto.subjectName,
           gradeLevelId: createSessionDto.gradeLevelId || null,
@@ -234,7 +233,7 @@ export class SchedulerService {
   async getSessionsByParent(parentId: number): Promise<schedulerSchema.TutoringSession[]> {
     try {
       return await this.db.query.tutoringSessions.findMany({
-        where: eq(schedulerSchema.tutoringSessions.parentId, parentId),
+        // where: eq(schedulerSchema.tutoringSessions.parentId, parentId),
         orderBy: [schedulerSchema.tutoringSessions.date, schedulerSchema.tutoringSessions.startTime],
       });
     } catch (error) {

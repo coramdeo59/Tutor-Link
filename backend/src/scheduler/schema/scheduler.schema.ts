@@ -25,7 +25,7 @@ export const tutoringSessions = pgTable('tutoring_sessions', {
   // Participants
   tutorId: integer('tutor_id').notNull(),
   childId: integer('child_id').notNull(),
-  parentId: integer('parent_id').notNull(),
+
   // Session details
   subjectId: integer('subject_id'),
   subjectName: varchar('subject_name', { length: 100 }).notNull(),
@@ -45,7 +45,6 @@ export const tutoringSessions = pgTable('tutoring_sessions', {
   cancellationReason: text('cancellation_reason'),
   // Notes and metadata
   notes: text('notes'),
-  zoomLink: varchar('zoom_link', { length: 255 }),
   // Timestamps
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

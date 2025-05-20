@@ -4,7 +4,7 @@ import Link from "next/link"
 import { BookOpen } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { LoginForm } from "@/components/auth/login-form"
+import { LoginForm } from "@/components/dashboard/auth/login-form"
 
 
 export default function LoginPage() {
