@@ -1,14 +1,16 @@
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   Users, 
   Search, 
   Calendar, 
   CreditCard, 
   Settings, 
-  LayoutDashboard 
+  LayoutDashboard,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   href: string;
@@ -18,6 +20,8 @@ interface NavItem {
 
 const DashboardSidebar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
   
   const navItems: NavItem[] = [
     {
@@ -53,18 +57,17 @@ const DashboardSidebar: React.FC = () => {
   ];
   
   return (
-    <aside className="bg-white border-r border-gray-200 w-[140px] h-screen flex-shrink-0 fixed left-0 top-0 overflow-y-auto">
-      <div className="py-4 px-2">
-        <div className="flex items-center justify-center mb-6 px-2">
-          <Link href="/" className="flex items-center space-x-1">
-            <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">T</span>
-            </div>
-            <span className="text-sm font-bold">TutorLink</span>
+    <aside className="bg-white border-r border-gray-200 w-[220px] h-screen flex-shrink-0 fixed left-0 top-0 overflow-y-auto">
+      <div className="h-full flex flex-col overflow-y-auto py-4 bg-white">
+        {/* Logo */}
+        <div className="flex items-center justify-center px-4 mb-6">
+          <Link href="/parent-dashboard" className="flex items-center">
+            <span className="text-amber-500 font-bold text-lg">TutorLink</span>
           </Link>
         </div>
         
-        <nav className="space-y-1">
+        {/* Navigation */}
+        <nav className="flex-1 px-2 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             
@@ -73,13 +76,14 @@ const DashboardSidebar: React.FC = () => {
                 key={item.href}
                 href={item.href}
                 className={`
-                  flex items-center px-3 py-2 text-xs font-medium
+                  flex items-center px-2 py-2 text-sm font-medium rounded-md group
+                  transition-colors duration-200
                   ${isActive 
-                    ? 'text-amber-700' 
-                    : 'text-gray-700 hover:text-gray-900'}
+                    ? 'bg-amber-50 text-amber-600' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                 `}
               >
-                <span className={`mr-2 ${isActive ? 'text-amber-500' : 'text-gray-500'}`}>
+                <span className={`mr-3 ${isActive ? 'text-amber-500' : ''}`}>
                   {item.icon}
                 </span>
                 {item.label}
@@ -87,6 +91,20 @@ const DashboardSidebar: React.FC = () => {
             );
           })}
         </nav>
+        
+        {/* Logout Button */}
+        <div className="border-t pt-4 mt-auto px-2">
+          <button
+            onClick={() => {
+              logout();
+              router.push('/auth/login');
+            }}
+            className="w-full flex items-center px-2 py-2 text-sm font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
+          >
+            <LogOut className="w-4 h-4 mr-3" />
+            Logout
+          </button>
+        </div>
       </div>
     </aside>
   );

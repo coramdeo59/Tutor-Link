@@ -1,50 +1,15 @@
 {
   "pages": {
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
-    ],
-    "/(dashboard)/tutor-dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/layout.js"
-    ],
-    "/(dashboard)/tutor-dashboard/assignments/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/assignments/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/students/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/students/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/feedback/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/feedback/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/availability/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/availability/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/subjects/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/subjects/page.js"
-    ],
-    "/(dashboard)/tutor-dashboard/settings/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/tutor-dashboard/settings/page.js"
     ],
     "/auth/login/page": [
       "static/chunks/webpack.js",
@@ -56,15 +21,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/auth/layout.js"
     ],
-    "/(dashboard)/parent-dashboard/page": [
+    "/(dashboard)/tutor-dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/parent-dashboard/page.js"
+      "static/chunks/app/(dashboard)/tutor-dashboard/page.js"
     ],
-    "/(dashboard)/parent-dashboard/layout": [
+    "/(dashboard)/tutor-dashboard/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(dashboard)/parent-dashboard/layout.js"
+      "static/chunks/app/(dashboard)/tutor-dashboard/layout.js"
     ],
     "/(dashboard)/tutor-dashboard/sessions/page": [
       "static/chunks/webpack.js",

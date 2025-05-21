@@ -40,7 +40,7 @@ export const childSubjects = pgTable('child_subjects', {
 });
 
 // Child tutoring sessions table - use a different name to avoid conflicts
-export const sessions = pgTable('child_tutoring_sessions', {
+export const childSessions = pgTable('child_tutoring_sessions', {
   sessionId: serial('session_id').primaryKey(),
   childId: integer('child_id')
     .notNull()
@@ -63,7 +63,7 @@ export const progressAssessments = pgTable('child_progress_assessments', {
   assessmentId: serial('assessment_id').primaryKey(),
   sessionId: integer('session_id')
     .notNull()
-    .references(() => sessions.sessionId, { onDelete: 'cascade' }),
+    .references(() => childSessions.sessionId, { onDelete: 'cascade' }),
   childId: integer('child_id')
     .notNull()
     .references(() => children.childId, { onDelete: 'cascade' }),
@@ -86,7 +86,7 @@ export const progressAssessments = pgTable('child_progress_assessments', {
 // Define relations for subjects table
 export const subjectsRelations = relations(subjects, ({ many }) => ({
   childSubjects: many(childSubjects),
-  sessions: many(sessions),
+  sessions: many(childSessions),
   progressAssessments: many(progressAssessments),
 }));
 
@@ -103,13 +103,13 @@ export const childSubjectsRelations = relations(childSubjects, ({ one }) => ({
 }));
 
 // Define relations for sessions table
-export const sessionsRelations = relations(sessions, ({ one, many }) => ({
+export const sessionsRelations = relations(childSessions, ({ one, many }) => ({
   child: one(children, {
-    fields: [sessions.childId],
+    fields: [childSessions.childId],
     references: [children.childId],
   }),
   subject: one(subjects, {
-    fields: [sessions.subjectId],
+    fields: [childSessions.subjectId],
     references: [subjects.subjectId],
   }),
   progressAssessments: many(progressAssessments),
@@ -117,9 +117,9 @@ export const sessionsRelations = relations(sessions, ({ one, many }) => ({
 
 // Define relations for progressAssessments table
 export const progressAssessmentsRelations = relations(progressAssessments, ({ one }) => ({
-  session: one(sessions, {
+  session: one(childSessions, {
     fields: [progressAssessments.sessionId],
-    references: [sessions.sessionId],
+    references: [childSessions.sessionId],
   }),
   child: one(children, {
     fields: [progressAssessments.childId],

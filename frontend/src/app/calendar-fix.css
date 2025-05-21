@@ -1,0 +1,19 @@
+/* Fix for calendar popover overflow */
+.rdp {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 300px !important;
+}
+
+.rdp-months {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.popover-content-calendar {
+  position: fixed !important;
+  z-index: 1000 !important;
+  background: white !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}

@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1747708192491,
-      "tag": "0000_large_ravenous",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1747708590060,
-      "tag": "0001_wandering_emma_frost",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1747761908009,
-      "tag": "0002_known_paibok",
+      "when": 1747777868881,
+      "tag": "0000_lumpy_raza",
       "breakpoints": true
     }
   ]

@@ -103,7 +103,7 @@ const TutorDashboardSidebar: React.FC = () => {
       </nav>
       
       {/* Logout Button */}
-      <div className="px-2 mt-auto mb-4">
+      <div className="border-t pt-4 mt-auto px-2">
         <button
           onClick={() => {
             logout();
@@ -114,17 +114,6 @@ const TutorDashboardSidebar: React.FC = () => {
           <LogOut className="w-4 h-4 mr-3" />
           Logout
         </button>
-      </div>
-      <div className="border-t pt-4 mt-4 px-2">
-        <div className="flex items-center space-x-2 px-2 py-2">
-          <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-semibold">
-            T
-          </div>
-          <div className="text-sm">
-            <p className="font-medium text-gray-700">Tutor</p>
-            <p className="text-gray-500 text-xs">View Profile</p>
-          </div>
-        </div>
       </div>
     </div>
   );

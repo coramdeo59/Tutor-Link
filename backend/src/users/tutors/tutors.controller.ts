@@ -27,6 +27,29 @@ export class TutorsController {
   constructor(
     private readonly tutorsService: TutorsService
   ) {}
+  
+  /**
+   * Debug endpoint for getting available students for tutoring
+   * @param user The authenticated user
+   * @returns Array of diagnostic information
+   */
+  @Get('debug/students')
+  @Auth(AuthType.Bearer)
+  async debugAvailableStudents(@ActiveUser() user: ActiveUserData) {
+    console.log('==== DEBUG ENDPOINT ACCESSED ====');
+    console.log('User:', user);
+    
+    // Return basic information without querying the database
+    return {
+      endpoint: 'debug/students',
+      userInfo: {
+        id: user.sub,
+        role: user.role
+      },
+      message: 'Debug endpoint successful',
+      timestamp: new Date().toISOString()
+    };
+  }
 
   // Public route - no authentication required
   @Get()

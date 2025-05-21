@@ -18,7 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Calendar } from "@/components/ui/calendar"
+import { ClientOnlyCalendar } from "@/components/ui/client-only-calendar"
 import {
   Popover,
   PopoverContent,
@@ -216,12 +216,19 @@ const AddChildForm: React.FC<AddChildFormProps> = ({ parentId, onSuccess, onCanc
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
+                    <ClientOnlyCalendar
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date > new Date()}
+                      disabled={(date) =>
+                        // Disable future dates and dates more than 18 years ago
+                        date > new Date() || 
+                        date < new Date(new Date().setFullYear(new Date().getFullYear() - 18))
+                      }
                       initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1990}
+                      toYear={2019}
                     />
                   </PopoverContent>
                 </Popover>

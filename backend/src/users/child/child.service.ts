@@ -5,12 +5,12 @@ import {
   InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
-import { CreateChildDto } from './dto/create-child.dto';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Inject } from '@nestjs/common';
+import { CreateChildDto } from './dto/create-child.dto';
+import { HashingService } from '../../auth/hashing/hashing.service';
+import { eq, ne, and, } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../core/database-connection';
-import { and, eq, ne } from 'drizzle-orm';
 import * as parentSchema from '../parent/schema/parent.schema';
 
 export interface ChildResponse {
@@ -39,6 +39,7 @@ export class ChildService {
       submissions: any;
       tutoringSessions: any;
     }>,
+    private readonly hashingService: HashingService,
   ) {}
 
   async findAll(): Promise<ChildResponse[]> {
@@ -129,6 +130,35 @@ export class ChildService {
       throw new InternalServerErrorException(`Failed to find child ${id}`);
     }
   }
+  
+  /**
+   * Find a child by ID specifically for tutoring session display
+   * This method excludes sensitive information and only returns data needed for sessions
+   * @param id The ID of the child to find
+   * @returns Child information with fields needed for session display
+   */
+  async findChildById(id: number): Promise<ChildResponse> {
+    try {
+      // First try to get the child from the database
+      const child = await this.db.query.children.findFirst({
+        where: eq(parentSchema.children.childId, id),
+      });
+
+      if (!child) {
+        throw new NotFoundException(`Child with ID ${id} not found`);
+      }
+
+      // Remove the password before returning
+      const { password, ...result } = child;
+      return result as ChildResponse;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`Error finding child ${id} for session:`, error);
+      throw new InternalServerErrorException(`Failed to find child ${id} for session`);
+    }
+  }
 
   async create(
     createChildDto: CreateChildDto,
@@ -161,8 +191,8 @@ export class ChildService {
         throw new ConflictException('Username already in use');
       }
 
-      // Hash the password
-      const hashedPassword = await bcrypt.hash(createChildDto.password, 10);
+      // Hash the password using the injected HashingService
+      const hashedPassword = await this.hashingService.hash(createChildDto.password);
 
       // Create the child record
       const [newChild] = await this.db
@@ -228,9 +258,9 @@ export class ChildService {
         }
       }
 
-      // Hash password if it's being updated
+      // Hash password if it's being updated using the injected HashingService
       if (updateChildDto.password) {
-        updateChildDto.password = await bcrypt.hash(updateChildDto.password, 10);
+        updateChildDto.password = await this.hashingService.hash(updateChildDto.password);
       }
 
       // Prepare update data
@@ -267,6 +297,114 @@ export class ChildService {
       }
       console.error(`Error updating child ${id}:`, error);
       throw new InternalServerErrorException('Failed to update child');
+    }
+  }
+
+  /**
+   * Finds students available for tutoring sessions with a specific tutor
+   * In a complete implementation, this would filter based on:
+   * - Tutor's subjects matching student's subjects of interest
+   * - Tutor's grade levels matching student's grade
+   * - Any parent preferences or restrictions
+   * 
+   * @param tutorId The ID of the tutor requesting students
+   * @returns List of students available for tutoring
+   */
+  /**
+   * Fetch students available for tutoring sessions with a tutor
+   * @param tutorId The ID of the tutor requesting students
+   * @returns List of formatted student data with subjects and grade levels
+   */
+  /**
+   * Find students available for tutoring sessions with a specific tutor
+   * @param tutorId The ID of the tutor requesting students
+   * @returns List of formatted student data with subjects and grade levels
+   */
+  /**
+   * Find students available for tutoring sessions with a specific tutor
+   * @param tutorId The ID of the tutor requesting students
+   * @returns List of formatted student data with subjects and grade levels
+   */
+  async findStudentsForTutor(tutorId: number): Promise<{
+    childId: number;
+    firstName: string;
+    lastName: string;
+    username: string;
+    photo: string | null;
+    gradeLevelId: number | null;
+    gradeLevelName: string;
+    subjects: string[];
+  }[]> {
+    // Validate tutor ID
+    if (!tutorId || isNaN(Number(tutorId))) {
+      throw new BadRequestException('Invalid tutor ID provided');
+    }
+    
+    // Define grade level mapping for formatting student data
+    const gradeLevelMap: Record<number, string> = {
+      1: '1st Grade', 2: '2nd Grade', 3: '3rd Grade', 4: '4th Grade',
+      5: '5th Grade', 6: '6th Grade', 7: '7th Grade', 8: '8th Grade',
+      9: '9th Grade', 10: '10th Grade', 11: '11th Grade', 12: '12th Grade'
+    };
+    
+    try {
+      // Use a direct SQL query for reliable results
+      const result = await this.db.execute('SELECT * FROM children ORDER BY first_name');
+      
+      // If we have results, map them to our response format
+      if (result && Array.isArray(result.rows) && result.rows.length > 0) {
+        // Map database results to our response format
+        const students = result.rows.map(child => {
+          // Get grade level name
+          const childGradeId = typeof child.grade_level_id === 'number' ? child.grade_level_id : null;
+          const gradeLevelName = childGradeId && gradeLevelMap[childGradeId] 
+            ? gradeLevelMap[childGradeId] 
+            : 'Unknown';
+            
+          // Assign default subjects based on grade level
+          let subjects = ['General Education'];
+          if (childGradeId) {
+            // Elementary school subjects (grades 1-5)
+            if (childGradeId >= 1 && childGradeId <= 5) {
+              subjects = ['Reading', 'Mathematics', 'Science'];
+            } 
+            // Middle school subjects (grades 6-8)
+            else if (childGradeId >= 6 && childGradeId <= 8) {
+              subjects = ['English', 'Mathematics', 'Science', 'History'];
+            } 
+            // High school subjects (grades 9-12)
+            else if (childGradeId >= 9 && childGradeId <= 12) {
+              subjects = ['English', 'Algebra', 'Biology', 'Chemistry', 'History'];
+            }
+          }
+            
+          // Return formatted student object with proper type casting
+          return {
+            childId: Number(child.child_id),
+            firstName: String(child.first_name || ''),
+            lastName: String(child.last_name || ''),
+            username: String(child.username || ''),
+            photo: child.photo ? String(child.photo) : null,
+            gradeLevelId: childGradeId,
+            gradeLevelName,
+            subjects
+          };
+        });
+          
+        return students;
+      } else {
+        // No students found in database
+        return [];
+      }
+    } catch (error) {
+      // Log error for troubleshooting
+      console.error(`Error fetching students for tutor ${tutorId}:`, error);
+      
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      
+      throw new InternalServerErrorException('Failed to fetch students for tutoring sessions');
     }
   }
 }

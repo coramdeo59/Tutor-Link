@@ -17,7 +17,7 @@ export const sessionStatus = ['scheduled', 'confirmed', 'completed', 'cancelled'
  */
 export const tutoringSessions = pgTable('tutoring_sessions', {
   // Primary key and relations
-  sessionId: serial('session_id').primaryKey(),
+  id: serial('id').primaryKey(),
   tutorId: integer('tutor_id').notNull(),
   childId: integer('child_id').notNull(),
   subjectId: integer('subject_id').notNull(),

@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Param, Put, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Patch, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { SessionsService, TutoringSession } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
 import { ActiveUser } from '../../../auth/authentication/decorators/active-user.decorator';
 import { ActiveUserData } from '../../../auth/interfaces/active-user.data.interface';
 import { AccessTokenGuard } from '../../../auth/authentication/guards/access-token/access-token.guard';
@@ -75,5 +76,16 @@ export class SessionsController {
     @ActiveUser() user: ActiveUserData
   ): Promise<TutoringSession> {
     return this.sessionsService.completeSession(id, user.sub);
+  }
+
+  // Update session status
+  @Patch(':id/status')
+  @Roles(Role.TUTOR)
+  async updateSessionStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateStatusDto: UpdateStatusDto,
+    @ActiveUser() user: ActiveUserData
+  ): Promise<TutoringSession> {
+    return this.sessionsService.updateSessionStatus(id, user.sub, updateStatusDto.status);
   }
 }

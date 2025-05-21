@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TutorDashboardService, TutoringSession } from '@/services/tutor-dashboard.service';
 import { format, addHours } from 'date-fns';
-import { Calendar, Clock, ArrowLeft, Check, X, Plus, User, BookOpen, GraduationCap } from 'lucide-react';
+import { Clock, ArrowLeft, Check, X, Plus, User, BookOpen, GraduationCap, Calendar as CalendarIcon } from 'lucide-react';
+import { ClientOnlyCalendar } from "@/components/ui/client-only-calendar";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {

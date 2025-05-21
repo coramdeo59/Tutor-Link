@@ -28,7 +28,7 @@ export default function ParentDashboardLayout({
       {/* Sidebar - note the updated width to match screenshot */}
       <div 
         className={`
-          fixed inset-y-0 left-0 z-30 w-[140px] transform bg-white transition duration-300 ease-in-out lg:static lg:translate-x-0
+          fixed inset-y-0 left-0 z-30 w-[200px] transform bg-white transition duration-300 ease-in-out lg:static lg:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
@@ -61,7 +61,7 @@ export default function ParentDashboardLayout({
         
         {/* Dashboard content */}
         <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="ml-0 lg:ml-[140px] transition-all duration-300 p-4">
+          <div className="ml-0 lg:ml-[220px] transition-all duration-300 p-4">
             {children}
           </div>
         </main>

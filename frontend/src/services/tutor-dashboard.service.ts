@@ -1,3 +1,4 @@
+'use clinet'
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -15,7 +16,8 @@ export interface TutorStats {
 }
 
 export interface TutoringSession {
-  sessionId: number;
+  id?: number; // New primary key from backend
+  sessionId?: number; // Keep for backward compatibility
   childId: number;
   childName?: string;
   subjectId: number;
@@ -25,6 +27,119 @@ export interface TutoringSession {
   endTime: string;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress';
   notes?: string;
+  durationMinutes?: number;
+  gradeLevelName?: string; // Added to match the usage in the UI
+}
+
+// Child and subject information interfaces
+// These are for API responses from the database
+export interface ChildDetails {
+  childId: number;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  gradeLevelId?: number;
+}
+
+export interface SubjectDetails {
+  subjectId: number;
+  name: string;
+  description?: string;
+}
+
+// Safely check if window is defined (client-side only)
+const isClient = typeof window !== 'undefined';
+
+// Fetches child details from the backend by ID
+export const fetchChildDetails = async (childId: number): Promise<ChildDetails | null> => {
+  try {
+    // Get token from localStorage - only in client environment
+    let token;
+    if (isClient) {
+      try {
+        token = localStorage.getItem('accessToken');
+      } catch (e) {
+        console.error('Error accessing localStorage:', e);
+        return null;
+      }
+    } else {
+      // Server-side fallback (Next.js SSR)
+      console.log('Running in server environment, using default token');
+      token = '';
+    }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(`${API_URL}/users/children/tutoring/child/${childId}`, {
+      method: 'GET',
+      headers
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error fetching child details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching child details for ID ${childId}:`, error);
+    return null;
+  }
+};
+
+// Fetches subject details from the backend by ID
+export const fetchSubjectDetails = async (subjectId: number): Promise<SubjectDetails | null> => {
+  try {
+    // Get token from localStorage - only in client environment
+    let token;
+    if (isClient) {
+      try {
+        token = localStorage.getItem('accessToken');
+      } catch (e) {
+        console.error('Error accessing localStorage:', e);
+        return null;
+      }
+    } else {
+      // Server-side fallback (Next.js SSR)
+      console.log('Running in server environment, using default token');
+      token = '';
+    }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(`${API_URL}/subjectAndGrade/subjects/${subjectId}`, {
+      method: 'GET',
+      headers
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error fetching subject details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`Error ${response.status}: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching subject details for ID ${subjectId}:`, error);
+    return null;
+  }
 }
 
 export interface Assignment {
@@ -47,6 +162,17 @@ export interface Feedback {
   createdAt: string;
 }
 
+export interface Student {
+  childId: number;
+  firstName: string;
+  lastName: string;
+  username: string;
+  photo: string | null;
+  gradeLevelId: number | null;
+  gradeLevelName: string;
+  subjects: string[];
+}
+
 /**
  * TutorDashboardService
  * Handles API calls related to the tutor dashboard
@@ -57,13 +183,23 @@ export class TutorDashboardService {
    * @returns Headers object with authorization token
    */
   private static getAuthHeaders(): Record<string, string> {
-    const token = localStorage.getItem('accessToken');
+    // Get token from storage
+    let token;
+    try {
+      token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+    } catch (e) {
+      console.error('Error accessing storage:', e);
+    }
+    
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     };
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('Added Authorization header with token');
+    } else {
+      console.warn('No authentication token available');
     }
     
     return headers;
@@ -176,6 +312,26 @@ export class TutorDashboardService {
   }
 
   /**
+   * Get available students for tutoring sessions
+   * @returns Promise with available students data
+   */
+  static async getAvailableStudents(): Promise<Student[]> {
+    try {
+      const headers = this.getAuthHeaders();
+      const response = await axios.get(
+        `${API_URL}/users/children/tutoring/available-students`,
+        { headers }
+      );
+      
+      // Return the students data directly from the API
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching available students:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get completed sessions for the tutor
    * @param limit Number of sessions to return
    * @returns Promise with sessions data
@@ -273,6 +429,45 @@ export class TutorDashboardService {
         completedSessions: 0,
         subjects: []
       };
+    }
+  }
+
+  /**
+   * Get available students for tutoring sessions
+   * Fetches the list of students that the tutor can create sessions with
+   * @returns Promise with array of student data
+   */
+  static async getAvailableStudents(): Promise<Student[]> {
+    try {
+      const headers = this.getAuthHeaders();
+      const response = await axios.get(`${API_URL}/users/children/tutoring/available-students`, { headers });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available students:', error);
+      // Return empty array on error
+      return [];
+    }
+  }
+
+  /**
+   * Update a session's status
+   * @param sessionId The ID of the session to update
+   * @param status The new status to set
+   * @returns Promise with the updated session data
+   */
+  static async updateSessionStatus(sessionId: number, status: string): Promise<TutoringSession> {
+    try {
+      const headers = this.getAuthHeaders();
+      const response = await axios.patch(
+        `${API_URL}/tutors/sessions/${sessionId}/status`,
+        { status },
+        { headers }
+      );
+      
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating session ${sessionId} status:`, error);
+      throw error; // Rethrow to let the component handle the error
     }
   }
 }

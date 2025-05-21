@@ -68,7 +68,7 @@ export const invoices = pgTable('invoices', {
 });
 
 // Session table schema (simplified, you'll expand this)
-export const sessions = pgTable('sessions', {
+export const paymentSessions = pgTable('payment_sessions', {
   id: serial('id').primaryKey(),
   tutorId: integer('tutor_id').notNull(), // Foreign key to users table (tutor)
   childId: integer('child_id').notNull(), // Foreign key to children table
@@ -92,12 +92,12 @@ export const paymentRelations = relations(payments, ({ one }) => ({
 
 export const invoiceRelations = relations(invoices, ({ many }) => ({
   payments: many(payments),
-  sessions: many(sessions),
+  sessions: many(paymentSessions),
 }));
 
-export const sessionRelations = relations(sessions, ({ one }) => ({
+export const sessionRelations = relations(paymentSessions, ({ one }) => ({
   invoice: one(invoices, {
-    fields: [sessions.invoiceId],
+    fields: [paymentSessions.invoiceId],
     references: [invoices.id],
   }),
 }));
@@ -105,7 +105,7 @@ export const sessionRelations = relations(sessions, ({ one }) => ({
 // Types for use in application code
 export type Payment = InferSelectModel<typeof payments>;
 export type Invoice = InferSelectModel<typeof invoices>;
-export type Session = InferSelectModel<typeof sessions>;
+export type PaymentSession = InferSelectModel<typeof paymentSessions>;
 
 // DTOs for payment creation
 export interface CreatePaymentDTO {

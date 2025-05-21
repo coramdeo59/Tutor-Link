@@ -11,7 +11,6 @@ import { DATABASE_CONNECTION } from '../core/database-connection';
 import { 
   payments, 
   invoices,
-  sessions,
   PaymentStatus, 
   ChapaInitializeResponse, 
   ChapaVerifyResponse, 
@@ -32,7 +31,6 @@ export class PaymentService {
     private readonly db: NodePgDatabase<{
       payments: typeof payments;
       invoices: typeof invoices;
-      sessions: typeof sessions;
     }>,
   ) {
     this.baseUrl = this.configService.get<string>('CHAPA_API_URL', 'https://api.chapa.co/v1');
