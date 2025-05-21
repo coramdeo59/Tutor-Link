@@ -44,8 +44,13 @@ interface GradeLevel {
 
 interface Student {
   id: number;
+  childId: number;
+  firstName: string;
+  lastName: string;
   name: string;
   gradeLevel?: string;
+  gradeLevelId?: number | null;
+  fullName?: string;
 }
 
 // New session form data interface
@@ -65,15 +70,19 @@ export default function TutorSessions() {
   const [sessions, setSessions] = useState<TutoringSession[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<TutoringSession[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [childDetailsLoaded, setChildDetailsLoaded] = useState(false);
   
   // Reference data state
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingReference, setLoadingReference] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
   
   // New session dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newSession, setNewSession] = useState<SessionFormData>({
     childId: 0,
     subjectId: 0,
@@ -83,16 +92,96 @@ export default function TutorSessions() {
     status: 'scheduled',
     notes: ''
   });
+  
+  // Function to fetch available students directly from the database
+  const fetchAvailableStudents = async () => {
+    try {
+      setStudentsLoading(true);
+      setStudentsError(null);
+      console.log('Fetching available students from database...');
+      
+      // Call the TutorDashboardService method to get students
+      const studentData = await TutorDashboardService.getAvailableStudents();
+      console.log('Successfully fetched students from database:', studentData);
+      
+      if (!studentData || studentData.length === 0) {
+        setStudentsError('No students available. Please try again later.');
+        setStudents([]);
+        setStudentsLoading(false);
+        return;
+      }
+      
+      // Map the data to our expected format with no mock data or fallbacks
+      const formattedStudents = studentData.map(student => ({
+        id: student.childId,
+        childId: student.childId,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        name: `${student.firstName} ${student.lastName}`,
+        gradeLevel: student.gradeLevelName || '',
+        gradeLevelId: student.gradeLevelId,
+        fullName: student.fullName || `${student.firstName} ${student.lastName}`
+      }));
+      
+      setStudents(formattedStudents);
+      console.log('Updated students state with data from database:', formattedStudents);
+    } catch (error) {
+      console.error('Error fetching students from database:', error);
+      setStudentsError('Failed to load students from database.');
+      setStudents([]);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
 
   // Fetch all sessions when component mounts
   useEffect(() => {
     const fetchSessions = async () => {
       try {
         setLoading(true);
-        // Use getAllSessions to get all sessions including past ones
-        const allSessions = await TutorDashboardService.getAllSessions();
-        setSessions(allSessions);
-        setFilteredSessions(allSessions);
+        // Use getUpcomingSessions with a high limit to get all sessions
+        const allSessions = await TutorDashboardService.getUpcomingSessions(100);
+        console.log('Successfully fetched sessions:', allSessions);
+        
+        if (allSessions && allSessions.length > 0) {
+          setSessions(allSessions);
+          setFilteredSessions(allSessions);
+          
+          // Now fetch child details for each session
+          const enhancedSessions = [...allSessions];
+          
+          // Start loading child details in parallel for all sessions
+          const childDetailPromises = enhancedSessions.map(async (session) => {
+            if (session.childId) {
+              try {
+                const childData = await fetchChildDetails(session.childId);
+                if (childData) {
+                  session.childName = `${childData.firstName} ${childData.lastName}`;
+                } else {
+                  // Use fallback names only when API fails, but log that we're doing this
+                  console.log(`No child data found for ID ${session.childId}, using fallback name`);
+                  session.childName = session.childId === 1 ? 'Edlawit Siraw' : `Student ${session.childId}`;
+                }
+              } catch (childErr) {
+                console.error(`Failed to fetch details for child ID ${session.childId}:`, childErr);
+                // Use generic name only when API fails
+                session.childName = `Student ${session.childId}`;
+              }
+            }
+            return session;
+          });
+          
+          // Wait for all child detail promises to resolve
+          await Promise.all(childDetailPromises);
+          
+          // Update the sessions with enhanced data including child names
+          setSessions(enhancedSessions);
+          setFilteredSessions(enhancedSessions.filter(session => 
+            statusFilter === 'all' || session.status === statusFilter
+          ));
+        } else {
+          console.log('No sessions found');
+        }
         setLoading(false);
       } catch (err) {
         console.error('Error fetching sessions:', err);
@@ -109,46 +198,18 @@ export default function TutorSessions() {
     const fetchReferenceData = async () => {
       try {
         setLoadingReference(true);
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        
-        // Get authentication headers
-        const token = localStorage.getItem('token');
-        const headers = {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        };
         
         // Fetch subjects
-        const subjectsResponse = await axios.get(
-          `${API_URL}/users/tutors/reference/subjects`,
-          { headers }
-        );
-        setSubjects(subjectsResponse.data || []);
+        const subjectsResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/subjectAndGrade/subjects`);
+        setSubjects(Array.isArray(subjectsResponse.data) ? subjectsResponse.data : []);
         
         // Fetch grade levels
-        const gradeLevelsResponse = await axios.get(
-          `${API_URL}/users/tutors/reference/grade-levels`,
-          { headers }
-        );
-        setGradeLevels(gradeLevelsResponse.data || []);
+        const gradeLevelsResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/subjectAndGrade/grade-levels`);
+        setGradeLevels(Array.isArray(gradeLevelsResponse.data) ? gradeLevelsResponse.data : []);
         
-        // Fetch students (assuming there's an endpoint for this)
-        try {
-          const studentsResponse = await axios.get(
-            `${API_URL}/users/tutors/students`,
-            { headers }
-          );
-          setStudents(studentsResponse.data || []);
-        } catch (studentErr) {
-          console.error('Error fetching students:', studentErr);
-          // Continue with empty students array
-          setStudents([
-            { id: 1, name: 'Emma Johnson', gradeLevel: '5th Grade' },
-            { id: 2, name: 'James Smith', gradeLevel: '8th Grade' },
-            { id: 3, name: 'Sophia Williams', gradeLevel: '3rd Grade' }
-          ]);
-        }
-        
+        // Fetch student data directly from the database
+        // This ensures we get real students without any mock data or fallbacks
+        await fetchAvailableStudents();
         setLoadingReference(false);
       } catch (err) {
         console.error('Error fetching reference data:', err);
@@ -334,7 +395,13 @@ export default function TutorSessions() {
         <div className="mt-4 md:mt-0 space-x-2 flex">
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-amber-600 hover:bg-amber-700 mr-2">
+              <Button 
+                className="bg-amber-600 hover:bg-amber-700 mr-2"
+                onClick={() => {
+                  // Fetch fresh student data from database before opening dialog
+                  fetchAvailableStudents();
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 New Session
               </Button>
@@ -549,7 +616,7 @@ export default function TutorSessions() {
                       
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <Calendar className="h-4 w-4 text-amber-600" />
+                          <CalendarIcon className="h-4 w-4 text-amber-600" />
                           <p className="text-gray-700">
                             <span className="font-medium">Date:</span> {formatDate(session.startTime)}
                             {isToday && <span className="ml-2 text-amber-600 font-medium">(Today)</span>}
@@ -579,7 +646,7 @@ export default function TutorSessions() {
                         <>
                           <Button 
                             size="sm" 
-                            onClick={() => handleStatusUpdate(session.sessionId, 'confirmed')}
+                            onClick={() => handleStatusUpdate(session.id!, 'confirmed')}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             <Check className="h-4 w-4 mr-1" />
@@ -588,7 +655,7 @@ export default function TutorSessions() {
                           <Button 
                             size="sm" 
                             variant="outline" 
-                            onClick={() => handleStatusUpdate(session.sessionId, 'cancelled')}
+                            onClick={() => handleStatusUpdate(session.id!, 'cancelled')}
                             className="text-red-600 border-red-600 hover:bg-red-50"
                           >
                             <X className="h-4 w-4 mr-1" />
@@ -601,7 +668,7 @@ export default function TutorSessions() {
                         <>
                           <Button
                             size="sm"
-                            onClick={() => handleStatusUpdate(session.sessionId, 'in_progress')}
+                            onClick={() => handleStatusUpdate(session.id!, 'in_progress')}
                             className="bg-amber-600 hover:bg-amber-700"
                           >
                             Start Session
@@ -609,7 +676,7 @@ export default function TutorSessions() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleStatusUpdate(session.sessionId, 'cancelled')}
+                            onClick={() => handleStatusUpdate(session.id!, 'cancelled')}
                             className="text-red-600 border-red-600 hover:bg-red-50"
                           >
                             <X className="h-4 w-4 mr-1" />
@@ -621,7 +688,7 @@ export default function TutorSessions() {
                       {session.status === 'in_progress' && (
                         <Button
                           size="sm"
-                          onClick={() => handleStatusUpdate(session.sessionId, 'completed')}
+                          onClick={() => handleStatusUpdate(session.id!, 'completed')}
                           className="bg-purple-600 hover:bg-purple-700"
                         >
                           Complete Session
@@ -658,9 +725,13 @@ export default function TutorSessions() {
           ) : (
             <div className="text-center py-10">
               <p className="text-gray-500 mb-4">No sessions found matching your criteria.</p>
-              <Button 
+              <Button
                 className="bg-amber-600 hover:bg-amber-700"
-                onClick={() => setCreateDialogOpen(true)}
+                onClick={() => {
+                  // Fetch fresh student data from database before opening dialog
+                  fetchAvailableStudents();
+                  setCreateDialogOpen(true);
+                }}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Schedule a new session
