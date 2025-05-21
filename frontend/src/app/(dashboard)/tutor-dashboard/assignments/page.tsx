@@ -102,11 +102,189 @@ export default function TutorAssignments() {
     }
   };
 
-  // This would create a new assignment in a real implementation
-  const handleCreateAssignment = () => {
-    console.log('Create assignment');
-    setCreateDialogOpen(false);
-    // Here would be the API call to create an assignment
+  // State for quick assignment form
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newAssignment, setNewAssignment] = useState({
+    childId: 0,
+    title: '',
+    description: '',
+    subjectId: 0,
+    dueDate: '',
+    notes: ''
+  });
+  const [students, setStudents] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<{id: number; name: string}[]>([]);
+  const [studentLoading, setStudentLoading] = useState(false);
+
+  // Fetch available students for assignment
+  const fetchAvailableStudents = async () => {
+    try {
+      setStudentLoading(true);
+      // Get students from the API
+      const availableStudents = await TutorDashboardService.getAvailableStudents();
+      
+      // Log the raw student data to understand its structure
+      console.log('Raw student data:', availableStudents);
+      
+      // Format students to ensure they have the correct structure
+      const formattedStudents = availableStudents.map(student => ({
+        id: student.childId || student.id, // Use childId if available, fall back to id
+        childId: student.childId || student.id,
+        firstName: student.firstName || '',
+        lastName: student.lastName || '',
+        name: student.name || student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim(),
+        gradeLevel: student.gradeLevelName || student.gradeLevel || ''
+      }));
+      
+      console.log('Formatted students:', formattedStudents);
+      setStudents(formattedStudents);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setError('Failed to load students. Please try again.');
+    } finally {
+      setStudentLoading(false);
+    }
+  };
+
+  // Fetch subjects for the dropdown from reference data API
+  const fetchSubjects = async () => {
+    try {
+      // Format token for the request
+      const token = getFormattedToken();
+      if (!token) {
+        console.error('No authentication token found when fetching subjects');
+        // Fall back to static data if no token
+        setSubjects([
+          { id: 1, name: 'Math' },
+          { id: 2, name: 'Science' },
+          { id: 3, name: 'English' },
+          { id: 4, name: 'History' }
+        ]);
+        return;
+      }
+      
+      // Use the reference data endpoint from our previous implementation
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await axios.get(
+        `${API_URL}/users/tutors/reference/subjects`,
+        {
+          headers: {
+            'Authorization': token,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('Subjects from reference data:', response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        setSubjects(response.data);
+      } else {
+        // Fall back to static data if response format is unexpected
+        console.warn('Unexpected format from subject reference API, using static data');
+        setSubjects([
+          { id: 1, name: 'Math' },
+          { id: 2, name: 'Science' },
+          { id: 3, name: 'English' },
+          { id: 4, name: 'History' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      // Fall back to static data on error
+      setSubjects([
+        { id: 1, name: 'Math' },
+        { id: 2, name: 'Science' },
+        { id: 3, name: 'English' },
+        { id: 4, name: 'History' }
+      ]);
+    }
+  };
+
+  // Helper function for consistent token formatting - applying our previous fix for JWT issues
+  const getFormattedToken = () => {
+    // Try multiple storage locations (from memory)
+    const token = 
+      localStorage.getItem('token') || 
+      localStorage.getItem('accessToken') || 
+      sessionStorage.getItem('token') || 
+      sessionStorage.getItem('accessToken');
+    
+    if (!token) {
+      console.error('No authentication token found');
+      return '';
+    }
+    
+    // Ensure consistent Bearer prefix
+    return token.startsWith('Bearer ') ? token : `Bearer ${token.trim()}`;
+  };
+
+  // Create a new assignment using our quick assign endpoint
+  const handleCreateAssignment = async () => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // Validate form
+      if (!newAssignment.childId || !newAssignment.title || !newAssignment.subjectId || !newAssignment.dueDate) {
+        setError('Please fill in all required fields');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Verify authentication - check token and format it correctly
+      const token = getFormattedToken();
+      if (!token) {
+        setError('Authentication token is missing. Please log in again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Ensure token is stored consistently for future requests
+      localStorage.setItem('token', token);
+      localStorage.setItem('accessToken', token);
+      
+      console.log('Creating assignment with data:', newAssignment);
+      
+      // Call the service method to create the assignment
+      const result = await TutorDashboardService.quickAssignHomework({
+        ...newAssignment,
+        childId: Number(newAssignment.childId),
+        subjectId: Number(newAssignment.subjectId)
+      });
+
+      console.log('Assignment created successfully:', result);
+      
+      // Close dialog and reset form
+      setCreateDialogOpen(false);
+      setNewAssignment({
+        childId: 0,
+        title: '',
+        description: '',
+        subjectId: 0,
+        dueDate: '',
+        notes: ''
+      });
+      
+      // Refresh the assignments list
+      const refreshedAssignments = await TutorDashboardService.getRecentAssignments(100);
+      setAssignments(refreshedAssignments);
+      setFilteredAssignments(refreshedAssignments);
+      
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+      
+      // Better error handling for authentication issues
+      if (error.response && error.response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+      } else if (error.response && error.response.data && error.response.data.message) {
+        setError(`Error: ${error.response.data.message}`);
+      } else {
+        setError('Failed to create assignment. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -127,63 +305,165 @@ export default function TutorAssignments() {
         <div className="mt-4 md:mt-0">
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-amber-600 hover:bg-amber-700">
+              <Button 
+                className="bg-amber-600 hover:bg-amber-700"
+                onClick={() => {
+                  // Load students and subjects when opening dialog
+                  fetchAvailableStudents();
+                  fetchSubjects();
+                  // Clear any previous errors
+                  setError(null);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Assignment
+                Quick Assignment
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>Create New Assignment</DialogTitle>
+                <DialogTitle>Create Quick Assignment</DialogTitle>
                 <DialogDescription>
-                  Fill out the form below to create a new assignment for your students.
+                  Quickly assign homework to a student with minimal details required.
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="title" className="text-right font-medium">
-                    Title
-                  </label>
-                  <Input id="title" placeholder="Assignment title" className="col-span-3" />
+              
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+                  <p>{error}</p>
                 </div>
+              )}
+              
+              <div className="grid gap-4 py-4">
+                {/* Student selection */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="student" className="text-right font-medium">
-                    Student
+                    Student *
                   </label>
-                  <Select>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select a student" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student1">Student 1</SelectItem>
-                      <SelectItem value="student2">Student 2</SelectItem>
-                      <SelectItem value="student3">Student 3</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="col-span-3">
+                    <Select 
+                      value={newAssignment.childId ? newAssignment.childId.toString() : ""}
+                      onValueChange={(value) => setNewAssignment({...newAssignment, childId: parseInt(value)})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {studentLoading ? (
+                          <SelectItem value="loading" disabled>Loading students...</SelectItem>
+                        ) : students.length === 0 ? (
+                          <SelectItem value="none" disabled>No students available</SelectItem>
+                        ) : (
+                          students.map(student => {
+                            // Make sure we have a valid ID and display name
+                            const displayId = student.childId || student.id;
+                            const displayName = student.name || student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim();
+                            
+                            // Only render items with valid IDs
+                            if (displayId) {
+                              return (
+                                <SelectItem key={displayId} value={displayId.toString()}>
+                                  {displayName || `Student ${displayId}`}
+                                  {student.gradeLevel ? ` (${student.gradeLevel})` : ''}
+                                </SelectItem>
+                              );
+                            }
+                            return null;
+                          }).filter(Boolean)
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                
+                {/* Title */}
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <label htmlFor="description" className="text-right font-medium">
-                    Description
+                  <label htmlFor="title" className="text-right font-medium">
+                    Title *
                   </label>
-                  <textarea 
-                    id="description" 
-                    placeholder="Assignment description" 
-                    className="col-span-3 min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+                  <Input 
+                    id="title" 
+                    placeholder="Assignment title" 
+                    className="col-span-3" 
+                    value={newAssignment.title}
+                    onChange={(e) => setNewAssignment({...newAssignment, title: e.target.value})}
                   />
                 </div>
+                
+                {/* Subject selection */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="subject" className="text-right font-medium">
+                    Subject *
+                  </label>
+                  <div className="col-span-3">
+                    <Select 
+                      value={newAssignment.subjectId ? newAssignment.subjectId.toString() : ""}
+                      onValueChange={(value) => setNewAssignment({...newAssignment, subjectId: parseInt(value)})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.id.toString()}>
+                            {subject.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {/* Due Date */}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="dueDate" className="text-right font-medium">
-                    Due Date
+                    Due Date *
                   </label>
-                  <Input id="dueDate" type="date" className="col-span-3" />
+                  <Input 
+                    id="dueDate" 
+                    type="date" 
+                    className="col-span-3"
+                    value={newAssignment.dueDate}
+                    onChange={(e) => setNewAssignment({...newAssignment, dueDate: e.target.value})}
+                  />
+                </div>
+                
+                {/* Description */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="description" className="text-right font-medium">
+                    Description *
+                  </label>
+                  <Input 
+                    id="description" 
+                    placeholder="Brief description of the assignment" 
+                    className="col-span-3"
+                    value={newAssignment.description}
+                    onChange={(e) => setNewAssignment({...newAssignment, description: e.target.value})}
+                  />
+                </div>
+                
+                {/* Notes */}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="notes" className="text-right font-medium">
+                    Notes
+                  </label>
+                  <Input 
+                    id="notes" 
+                    placeholder="Additional notes or instructions (optional)" 
+                    className="col-span-3"
+                    value={newAssignment.notes || ''}
+                    onChange={(e) => setNewAssignment({...newAssignment, notes: e.target.value})}
+                  />
                 </div>
               </div>
+              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="button" onClick={handleCreateAssignment} className="bg-amber-600 hover:bg-amber-700">
-                  Create Assignment
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+                <Button 
+                  onClick={handleCreateAssignment} 
+                  className="bg-amber-600 hover:bg-amber-700"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating...' : 'Assign Homework'}
                 </Button>
               </DialogFooter>
             </DialogContent>

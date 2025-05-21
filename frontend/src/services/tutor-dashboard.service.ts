@@ -179,30 +179,46 @@ export interface Student {
  */
 export class TutorDashboardService {
   /**
-   * Get authentication headers for API requests
-   * @returns Headers object with authorization token
+   * Get authentication headers
+   * @returns Headers object with Authorization token
    */
   private static getAuthHeaders(): Record<string, string> {
-    // Get token from storage
-    let token;
-    try {
-      token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
-    } catch (e) {
-      console.error('Error accessing storage:', e);
+    // Try multiple possible token keys to handle inconsistencies
+    let token = localStorage.getItem('token') || 
+               localStorage.getItem('accessToken') || 
+               sessionStorage.getItem('accessToken');
+    
+    // First, check for existing token with Bearer prefix (important!)    
+    if (token && token.startsWith('Bearer ')) {
+      // Token already has Bearer prefix - leave as is
+      console.log('Token already has Bearer prefix');
+    } else {
+      // Check if token exists and is not malformed
+      if (!token || token === 'undefined' || token === 'null') {
+        console.error('Auth token is missing or invalid');
+        // For now, fallback to empty token to make the error more obvious in API responses
+        token = '';
+      } else {
+        // Ensure token is properly trimmed to avoid whitespace issues
+        token = token.trim();
+        
+        // Store original form for diagnostics
+        const originalTokenLength = token.length;
+        
+        // Add Bearer prefix only if it's not already there
+        if (!token.startsWith('Bearer ')) {
+          token = `Bearer ${token}`;
+        }
+        
+        console.log(`Processed token: original length=${originalTokenLength}, new length=${token.length}`);
+      }
     }
     
-    const headers: Record<string, string> = {
+    // Return headers with Authorization if token exists
+    return {
+      Authorization: token, // Don't add Bearer prefix again - it should already be in the token
       'Content-Type': 'application/json'
     };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-      console.log('Added Authorization header with token');
-    } else {
-      console.warn('No authentication token available');
-    }
-    
-    return headers;
   }
 
   /**
@@ -312,22 +328,99 @@ export class TutorDashboardService {
   }
 
   /**
-   * Get available students for tutoring sessions
-   * @returns Promise with available students data
+   * Quick assign homework to a student
+   * @param assignmentData Object containing assignment details
+   * @returns Promise with assignment creation result
    */
-  static async getAvailableStudents(): Promise<Student[]> {
+  static async quickAssignHomework(assignmentData: {
+    childId: number;
+    title: string;
+    description: string;
+    subjectId: number;
+    dueDate: string;
+    notes?: string;
+  }) {
     try {
       const headers = this.getAuthHeaders();
-      const response = await axios.get(
-        `${API_URL}/users/children/tutoring/available-students`,
+      const response = await axios.post(
+        `${API_URL}/tutors/assignments/quick-assign`,
+        assignmentData,
         { headers }
       );
       
-      // Return the students data directly from the API
-      return response.data || [];
+      return response.data;
     } catch (error) {
-      console.error('Error fetching available students:', error);
-      return [];
+      console.error('Error creating quick assignment:', error);
+      throw error;
+    }
+  }
+
+  // This implementation is now removed as it's a duplicate of the one below
+
+  /**
+   * Create a new tutoring session
+   * @param sessionData The data for the new tutoring session
+   * @returns Promise with the created session data
+   */
+  static async createSession(sessionData: any): Promise<any> {
+    try {
+      // Get token directly to ensure we're using the latest formatted version
+      const token = localStorage.getItem('token') || 
+                    localStorage.getItem('accessToken') || 
+                    sessionStorage.getItem('accessToken');
+                    
+      // Format token if needed
+      const formattedToken = token && !token.startsWith('Bearer ') ? 
+                           `Bearer ${token.trim()}` : token;
+      
+      // Use the formatted token directly
+      const headers = {
+        Authorization: formattedToken,
+        'Content-Type': 'application/json'
+      };
+      
+      console.log('Creating session with headers:', {
+        authHeaderLength: headers.Authorization?.length || 0,
+        hasBearerPrefix: headers.Authorization?.startsWith('Bearer ') || false
+      });
+      
+      console.log('Creating session with data:', {
+        ...sessionData,
+        childId: Number(sessionData.childId),
+        subjectId: Number(sessionData.subjectId)  
+      });
+      
+      // Make direct API call with the formatted header
+      const response = await axios.post(
+        `${API_URL}/tutors/sessions`,
+        {
+          ...sessionData,
+          childId: Number(sessionData.childId),
+          subjectId: Number(sessionData.subjectId),
+          // Add durationMinutes if it doesn't exist
+          durationMinutes: sessionData.durationMinutes || 
+            (sessionData.startTime && sessionData.endTime ? 
+            Math.round((new Date(sessionData.endTime).getTime() - new Date(sessionData.startTime).getTime()) / 60000) : 60)
+        },
+        { headers }
+      );
+      
+      console.log('Session created successfully:', response.data);
+      
+      // Store the token with Bearer prefix for future use
+      if (formattedToken) {
+        localStorage.setItem('token', formattedToken);
+        localStorage.setItem('accessToken', formattedToken);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating session:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+      }
+      throw error;
     }
   }
 
@@ -433,17 +526,32 @@ export class TutorDashboardService {
   }
 
   /**
-   * Get available students for tutoring sessions
-   * Fetches the list of students that the tutor can create sessions with
+   * Fetches the list of students that the tutor can create sessions and assignments with
    * @returns Promise with array of student data
    */
-  static async getAvailableStudents(): Promise<Student[]> {
+  static async getAvailableStudents(): Promise<any[]> {
     try {
       const headers = this.getAuthHeaders();
-      const response = await axios.get(`${API_URL}/users/children/tutoring/available-students`, { headers });
-      return response.data;
-    } catch (error) {
+      
+      // Add cache-busting query parameter
+      const timestamp = new Date().getTime();
+      
+      const response = await axios.get(
+        `${API_URL}/users/children/tutoring/available-students?_=${timestamp}`, 
+        { 
+          headers: {
+            ...headers,
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache'
+          }
+        }
+      );
+      
+      console.log('Available students response:', response.status, response.data);
+      return response.data || [];
+    } catch (error: any) { // Type assertion for error handling
       console.error('Error fetching available students:', error);
+      console.log('Error details:', error.response?.data || error.message);
       // Return empty array on error
       return [];
     }

@@ -239,7 +239,7 @@ export default function TutorSessions() {
     if (statusFilter === 'all') {
       setFilteredSessions(sessions);
     } else {
-      setFilteredSessions(sessions.filter(session => session.status === statusFilter));
+      setFilteredSessions(sessions.filter((session: TutoringSession) => session.status === statusFilter));
     }
   }, [statusFilter, sessions]);
 
@@ -289,14 +289,18 @@ export default function TutorSessions() {
       );
       
       // Refresh the sessions list to get the updated data
-      const updatedSessions = await TutorDashboardService.getAllSessions();
-      setSessions(updatedSessions);
+      const updatedSessions = await TutorDashboardService.getUpcomingSessions(100);
+      console.log('Sessions refreshed after status update:', updatedSessions);
       
-      // Re-apply filter if needed
-      if (statusFilter === 'all') {
-        setFilteredSessions(updatedSessions);
-      } else {
-        setFilteredSessions(updatedSessions.filter(session => session.status === statusFilter));
+      if (updatedSessions && updatedSessions.length > 0) {
+        setSessions(updatedSessions);
+        
+        // Re-apply filter if needed
+        if (statusFilter === 'all') {
+          setFilteredSessions(updatedSessions);
+        } else {
+          setFilteredSessions(updatedSessions.filter((session: any) => session.status === statusFilter));
+        }
       }
       
       // Show success message
@@ -307,16 +311,9 @@ export default function TutorSessions() {
     }
   };
 
-  // Handle session creation
-  const handleCreateSession = async () => {
+  // Helper function to fetch child details
+  const fetchChildDetails = async (childId: number) => {
     try {
-      // Validate form
-      if (!newSession.childId || !newSession.subjectId || !newSession.title || !newSession.startTime || !newSession.endTime) {
-        setError('Please fill in all required fields');
-        return;
-      }
-      
-      // Create session via API
       const token = localStorage.getItem('token');
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const headers = {
@@ -324,45 +321,136 @@ export default function TutorSessions() {
         'Content-Type': 'application/json'
       };
       
-      await axios.post(
-        `${API_URL}/tutors/sessions`,
-        {
-          ...newSession,
-          childId: Number(newSession.childId),
-          subjectId: Number(newSession.subjectId)
-        },
-        { headers }
-      );
-      
-      // Close dialog and refresh sessions
-      setCreateDialogOpen(false);
-      
-      // Reset form
-      setNewSession({
-        childId: 0,
-        subjectId: 0,
-        title: '',
-        startTime: '',
-        endTime: '',
-        status: 'scheduled',
-        notes: ''
-      });
-      
-      // Refresh session list
-      const updatedSessions = await TutorDashboardService.getAllSessions();
-      setSessions(updatedSessions);
-      
-      // Re-apply any filters
-      if (statusFilter === 'all') {
-        setFilteredSessions(updatedSessions);
-      } else {
-        setFilteredSessions(updatedSessions.filter(session => session.status === statusFilter));
-      }
-    } catch (err) {
-      console.error('Error creating session:', err);
-      setError('Failed to create session. Please try again.');
+      const response = await axios.get(`${API_URL}/users/children/${childId}`, { headers });
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching child details for ID ${childId}:`, error);
+      return null;
     }
   };
+
+  // Handle session creation
+  const handleCreateSession = async () => {
+    try {
+      setError(null); // Clear any previous errors
+
+      // Validate form
+      if (!newSession.childId || !newSession.subjectId || !newSession.title || !newSession.startTime || !newSession.endTime) {
+        setError('Please fill in all required fields');
+        return;
+      }
+
+      // Validate authentication - check if token exists
+      const token = localStorage.getItem('token') || 
+                   localStorage.getItem('accessToken') || 
+                   sessionStorage.getItem('accessToken');
+                   
+      if (!token) {
+        setError('Authentication token is missing. Please log in again.');
+        console.error('Missing authentication token when trying to create session');
+        return;
+      }
+      
+      // Update token storage to be consistent
+      // This ensures all components use the same token format
+      if (token) {
+        // Make sure token has Bearer prefix for consistency with backend expectations
+        const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token.trim()}`;
+        
+        // Store the properly formatted token in both locations for consistency
+        localStorage.setItem('token', formattedToken);
+        localStorage.setItem('accessToken', formattedToken);
+        
+        console.log('Token reformatted and saved consistently');
+      }
+      
+      // Create session via API
+      console.log('Creating session with data:', {
+        ...newSession,
+        childId: Number(newSession.childId),
+        subjectId: Number(newSession.subjectId)
+      });
+      
+      // Prepare session data - ensure all required fields
+      const sessionData = {
+        ...newSession,
+        childId: Number(newSession.childId),
+        subjectId: Number(newSession.subjectId),
+        durationMinutes: Math.round(
+          (new Date(newSession.endTime).getTime() - new Date(newSession.startTime).getTime()) / 60000
+        ),
+        status: newSession.status || 'scheduled'
+      };
+      
+      console.log('Prepared session data for creation:', sessionData);
+      
+      // Call the service method with clear error handling
+      try {
+        const createdSession = await TutorDashboardService.createSession(sessionData);
+        console.log('Session created successfully:', createdSession);
+        
+        // Immediately display the new session on the page
+        if (createdSession) {
+          const updatedSessions = [createdSession, ...sessions];
+          setSessions(updatedSessions);
+          
+          // Apply filter
+          if (statusFilter === 'all' || createdSession.status === statusFilter) {
+            setFilteredSessions([createdSession, ...filteredSessions]);
+          }
+        }
+        
+        // Close dialog
+        setCreateDialogOpen(false);
+        
+        // Reset form
+        setNewSession({
+          childId: 0,
+          subjectId: 0,
+          title: '',
+          startTime: '',
+          endTime: '',
+          status: 'scheduled',
+          notes: ''
+        });
+        
+        // Refresh sessions data as a failsafe (in case immediate update missed something)
+        setTimeout(async () => {
+          try {
+            // Use getUpcomingSessions with a high limit to refresh all sessions
+            const refreshedSessions = await TutorDashboardService.getUpcomingSessions(100);
+            console.log('Refreshed sessions from API after creation:', refreshedSessions.length);
+            
+            if (refreshedSessions && refreshedSessions.length > 0) {
+              setSessions(refreshedSessions);
+              
+              // Re-apply filter if needed
+              if (statusFilter === 'all') {
+                setFilteredSessions(refreshedSessions);
+              } else {
+                setFilteredSessions(refreshedSessions.filter((session: TutoringSession) => 
+                  session.status === statusFilter
+                ));
+              }
+            }
+          } catch (refreshError) {
+            console.error('Failed to refresh sessions:', refreshError);
+          }
+        }, 1000);
+      } catch (apiError: any) {
+        if (apiError.response && apiError.response.status === 401) {
+          setError('Authentication failed. Please log in again.');
+          console.error('Authentication error when creating session:', apiError.response?.data);
+          return;
+        } else {
+          throw apiError; // Re-throw for the outer catch block to handle
+        }
+      }
+  } catch (err) {
+    console.error('Error creating session:', err);
+    setError('Failed to create session. Please try again.');
+  }
+};
   
   // Handle start time change and auto-update end time (1 hour later by default)
   const handleStartTimeChange = (value: string) => {

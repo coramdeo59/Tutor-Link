@@ -69,7 +69,41 @@ export class AccessTokenGuard implements CanActivate {
 	}
 
 	private extractTokenFromHeader(request: Request): string | undefined {
-		const [type, token] = request.headers.authorization?.split(" ") ?? [];
-		return type === "Bearer" ? token : undefined;
+		const authHeader = request.headers.authorization;
+		
+		if (!authHeader) {
+			return undefined;
+		}
+		
+		// Handle case where the token already includes 'Bearer ' prefix correctly
+		if (authHeader.startsWith('Bearer ')) {
+			const token = authHeader.substring(7).trim(); // Remove 'Bearer ' prefix (7 chars)
+			return token;
+		}
+		
+		// Attempt to split and check for alternative formats
+		const parts = typeof authHeader === 'string' ? authHeader.split(' ') : [];
+		
+		// Check if first part is 'Bearer' (case-insensitive)
+		if (parts.length >= 2 && typeof parts[0] === 'string' && parts[0].toLowerCase() === 'bearer') {
+			const token = parts[1]?.trim() || '';
+			if (token) {
+				// console.log(`Found Bearer token from parts /(length: ${token.length})`);
+				return token;
+			}
+		}
+		
+		// If header doesn't follow Bearer format, log this for debugging
+		// console.log('Authorization header does not follow Bearer format, checking if it might be a raw token');
+		
+		// As a fallback, check if the entire header might be the token itself
+		// This handles cases where frontend mistakenly sends token without 'Bearer ' prefix
+		if (authHeader && authHeader.length > 20 && typeof authHeader === 'string' && authHeader.includes('.')) { 
+			// Simple heuristic: JWT tokens are usually long and contain periods
+			// console.log(`Treating entire Authorization header as token (length: ${authHeader.length})`);
+			return authHeader.trim();
+		}
+		
+		return undefined;
 	}
 }

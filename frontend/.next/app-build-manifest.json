@@ -35,6 +35,16 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/tutor-dashboard/sessions/page.js"
+    ],
+    "/(dashboard)/tutor-dashboard/assignments/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/tutor-dashboard/assignments/page.js"
+    ],
+    "/(dashboard)/tutor-dashboard/students/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/tutor-dashboard/students/page.js"
     ]
   }
 }

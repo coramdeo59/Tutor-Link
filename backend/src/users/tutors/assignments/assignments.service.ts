@@ -222,4 +222,49 @@ export class AssignmentsService {
     
     return { success: true, id };
   }
+
+  // Quick assign homework to a student (simplified version)
+  async quickAssign(tutorId: number, quickAssignmentData: any) {
+    // Validate the child exists (in a real app, this would have DB validation)
+    const { childId, title, description, subjectId, dueDate, notes } = quickAssignmentData;
+    
+    if (!childId || !title || !subjectId || !dueDate) {
+      throw new BadRequestException('Missing required fields for quick assignment');
+    }
+    
+    // Create a simplified assignment
+    const newAssignment: Assignment = {
+      id: this.nextAssignmentId++,
+      tutorId,
+      title,
+      description,
+      instructions: notes || description, // Use notes as instructions if provided
+      subjectId,
+      dueDate: new Date(dueDate),
+      status: 'assigned' as typeof assignmentStatus[number],
+      maxScore: 100, // Default score
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    this.assignments.push(newAssignment);
+    
+    // Create submission record
+    const newSubmission: Submission = {
+      id: this.nextSubmissionId++,
+      assignmentId: newAssignment.id,
+      childId,
+      status: 'not_started' as typeof submissionStatus[number],
+      assignedAt: new Date()
+    };
+    
+    this.submissions.push(newSubmission);
+    
+    return { 
+      success: true,
+      assignment: newAssignment, 
+      submission: newSubmission,
+      message: `Assignment "${title}" successfully assigned to student`
+    };
+  }
 }

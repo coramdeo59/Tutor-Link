@@ -2,12 +2,14 @@ import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, ParseIntPip
 import { AssignmentsService, Assignment, Submission } from './assignments.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentSubmissionDto } from './dto/update-assignment-submission.dto';
+// import { QuickAssignmentDto } from './dto/quick-assignment.dto';
 import { ActiveUser } from '../../../auth/authentication/decorators/active-user.decorator';
 import { ActiveUserData } from '../../../auth/interfaces/active-user.data.interface';
 import { AccessTokenGuard } from '../../../auth/authentication/guards/access-token/access-token.guard';
 import { RolesGuard } from '../../../auth/authentication/guards/roles/roles.guard';
 import { Roles } from '../../../auth/authentication/decorators/roles.decorator';
 import { Role } from '../../../users/enums/role.enum';
+import { QuickAssignmentDto } from './dto/quick-assignment.dto';
 
 @Controller('tutors/assignments')
 @UseGuards(AccessTokenGuard, RolesGuard)
@@ -74,5 +76,15 @@ export class AssignmentsController {
     @ActiveUser() user: ActiveUserData
   ): Promise<{ success: boolean; id: number }> {
     return this.assignmentsService.deleteAssignment(id, user.sub);
+  }
+
+  // Quick assign homework to a student (simplified version)
+  @Post('quick-assign')
+  @Roles(Role.TUTOR)
+  async quickAssignHomework(
+    @Body() quickAssignmentDto: QuickAssignmentDto,
+    @ActiveUser() user: ActiveUserData
+  ) {
+    return this.assignmentsService.quickAssign(user.sub, quickAssignmentDto);
   }
 }

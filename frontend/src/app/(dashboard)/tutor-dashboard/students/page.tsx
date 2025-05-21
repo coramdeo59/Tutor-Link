@@ -35,32 +35,69 @@ export default function TutorStudents() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  // Helper function to get auth headers
+  // Helper function for consistent token formatting - same as we did for assignments page
+  const getFormattedToken = () => {
+    // Try multiple storage locations
+    const token = 
+      localStorage.getItem('token') || 
+      localStorage.getItem('accessToken') || 
+      sessionStorage.getItem('token') || 
+      sessionStorage.getItem('accessToken');
+    
+    if (!token) {
+      console.error('No authentication token found');
+      return '';
+    }
+    
+    // Ensure consistent Bearer prefix
+    return token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+  };
+  
+  // Helper function to get auth headers with proper token
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('accessToken');
+    const token = getFormattedToken();
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': token
     };
   };
 
-  // Fetch students data when component mounts
+  // Fetch available students data when component mounts
   useEffect(() => {
     const fetchStudents = async () => {
       try {
         setLoading(true);
         
-        // Get tutor's students
+        // Get available students from the requested endpoint
         const response = await axios.get(
-          `${API_URL}/users/tutors/students`,
+          `${API_URL}/users/children/tutoring/available-students`,
           { headers: getAuthHeaders() }
         );
         
-        setStudents(response.data || []);
-        setFilteredStudents(response.data || []);
+        console.log('Available students:', response.data);
+        
+        // Process the response data to match our expected Student interface
+        const formattedStudents = Array.isArray(response.data) ? response.data.map(student => {
+          // Map API response to our Student interface
+          return {
+            id: student.childId || student.id,
+            name: student.name || student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim() || `Student ${student.id}`,
+            email: student.email || 'Not available',
+            phone: student.phone || 'Not available',
+            grade: student.gradeLevel || student.gradeLevelName || 'Not specified',
+            subjects: student.subjects || [],
+            sessions: student.sessionCount || 0,
+            lastSession: student.lastSessionDate,
+            nextSession: student.nextSessionDate,
+            parentName: student.parentName
+          };
+        }) : [];
+        
+        setStudents(formattedStudents);
+        setFilteredStudents(formattedStudents);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching students:', err);
+        console.error('Error fetching available students:', err);
         setError('Failed to load students data. Please try again later.');
         setLoading(false);
       }
